@@ -1,14 +1,4 @@
 """
-The wire contract between the browser canvas and the Brian2 backend.
-
-One rule governs this file: the JSON the frontend produces is a *description of
-a network*, never code and never anything Brian2-specific like a class name.
-The backend owns the translation. That keeps the frontend replaceable and means
-a graph saved today still loads after the backend is rewritten.
-
-Everything with physical dimensions is a string ("20*ms"), parsed by
-safe_units.safe_eval_quantity. Never a float with an implied unit -- that is how
-you end up with millivolt/volt bugs that only show up as silence in the raster.
 """
 
 from __future__ import annotations
