@@ -1,5 +1,3 @@
-"""Fast tests -- no long simulations. Run: python -m pytest tests/ -q"""
-
 import copy
 import json
 import subprocess
