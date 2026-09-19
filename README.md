@@ -35,16 +35,18 @@ Run the tests with:
 python -m pytest test_spikenet.py -q
 ```
 
+
 ## The model
 
-A SpikeNet Lab network is built from four object types:
+A SpikeNet Lab network is made from four object types:
 
-- **Populations** — groups of neurons with their own equations, thresholds, resets, initial conditions, and parameters.
-- **Synapses** — directed connections with probabilities/conditions, delays, pathways (`on_pre` / `on_post`), constants, and optional per-synapse state.
-- **Inputs** — external drives such as Poisson, DC, sinusoidal, chirp, spike-train, and Ornstein-Uhlenbeck noise.
-- **Monitors** — recordings of spikes, population activity, or state variables.
+- Populations: groups of neurons with their own equations, thresholds, resets, initial conditions, and parameters.
+- Synapses: directed connections with probabilities or conditions, delays, pathways (`on_pre` / `on_post`), constants, and optional per-synapse state.
+- Inputs: external drives such as Poisson, DC, sinusoidal, chirp, spike-train, and Ornstein-Uhlenbeck noise.
+- Monitors: recordings of spikes, population activity, or state variables.
 
-The graph is stored as JSON. It describes the **network**, not Python source code and not Brian2 class names; the backend performs the translation.
+The graph is stored as JSON. It describes the network rather than Python source code or Brian2 class names; the backend performs the translation.
+
 
 ### Communication between populations
 
@@ -82,11 +84,11 @@ means that a presynaptic spike gives the target an instantaneous synaptic increm
 The interface has three main areas: a graph canvas, an inspector, and analysis panels.
 
 - Drag nodes to move them; drag the background to pan; scroll to zoom.
-- Toggle **Connect** and click two nodes to create a directed connection.
+- Toggle "Connect" and click two nodes to create a directed connection.
 - Select a node or edge to edit equations, parameters, pathways, and connection rules.
-- Use **Run** to simulate the current graph.
-- Use **Code** to inspect the generated Brian2 script.
-- Use **+ Panel** to inspect the same run from multiple views.
+- Use "Run" to simulate the current graph.
+- Use "Code" to inspect the generated Brian2 script.
+- Use "+ Panel" to inspect the same run from multiple views.
 
 After a run, the transport bar can replay the recorded activity. The mapping between model time and playback time is shown explicitly in the interface.
 
@@ -225,7 +227,6 @@ This is still a prototype. In particular:
 - AI/SI/SR/AR regime labels are threshold conventions, not fitted phase boundaries;
 - the default synaptic model is simplified and is not a full conductance-based or biophysical model;
 - Cython is not the primary tested code-generation path;
-- there is no authentication or multi-user access control;
 - the complete tool has not been validated against published benchmark results.
 
 ## References
