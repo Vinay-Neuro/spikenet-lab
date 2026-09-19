@@ -2,9 +2,9 @@
 
 A population-based, graph-driven simulator and analysis framework for spiking neural networks, built on [Brian2](https://brian2.readthedocs.io/).
 
-SpikeNet Lab represents a network as a graph of **populations, synapses, inputs, and monitors**. That graph is validated, translated into Brian2 objects, simulated, and analysed.
+SpikeNet Lab represents a network as a graph of populations, synapses, inputs, and monitors. That graph is translated into Brian2 objects, simulated, and analysed.
 
-The default example is a recurrent excitatory-inhibitory (Brunel-style) network.
+The default example is a simple recurrent excitatory-inhibitory (Brunel-style) network.
 
 **Status: Just a fun prototype.** Feel free to reach out to me (@dr.vinay.neuro@gmail.com) with any suggestions or ideas. This is intended for exploration and experimentation rather than as a validated reference simulator. The simulation engine is Brian2; SpikeNet Lab adds the graph representation, validation, interface, analysis, and parameter-sweep layers.
 
