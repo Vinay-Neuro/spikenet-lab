@@ -50,7 +50,7 @@ The graph is stored as JSON. It describes the network rather than Python source 
 
 ### Communication between populations
 
-There is no separate "output equation". A source neuron emits a spike when its threshold is crossed; the synapse defines the event-triggered effect; the target neuron's equations determine how that state evolves.
+A source neuron emits a spike when its threshold is crossed; the synapse defines the event-triggered effect; the target neuron's equations determine how that state evolves.
 
 ```text
 source spike
