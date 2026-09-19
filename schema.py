@@ -10,13 +10,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 def _clean_position(value: Any) -> dict[str, float]:
-    """Coerce a canvas position into two finite floats.
-
-    Position is decoration: the backend never reads it. So it must never be the
-    reason a simulation refuses to run. A frontend that computes NaN (dragging a
-    node whose position was absent, say) serialises it as JSON `null`, and
-    strict validation would then reject the whole graph over a cosmetic field.
-    Anything unusable becomes 0.0 and the run proceeds.
+    """
     """
     if not isinstance(value, dict):
         return {"x": 0.0, "y": 0.0}
@@ -48,17 +42,10 @@ class NeuronNode(BaseModel):
     refractory: str | None = None  # e.g. "2*ms"
     method: Literal["euler", "exact", "heun", "milstein", "rk2", "rk4"] = "euler"
 
-    # Free-form constants referenced by the equation strings: {"tau_m": "20*ms"}.
-    # This dict is what the parameter sliders write into. Adding a new tunable
-    # constant needs no schema change, no migration and no backend edit --
-    # which is how "exhaustive" stays maintainable.
     params: dict[str, str] = Field(default_factory=dict)
 
-    # Initial values, same convention: {"v": "10*mV", "s_e": "0*mV"}.
-    # Values may be expressions over the group's own variables, e.g. "rand()*20*mV".
     initial: dict[str, str] = Field(default_factory=dict)
 
-    # Canvas position -- backend ignores it, but it round-trips so layouts persist.
     position: dict[str, float] = Field(default_factory=lambda: {"x": 0.0, "y": 0.0})
 
     @field_validator("equations")
@@ -121,10 +108,6 @@ StimulusKind = Literal[
 
 class StimulusNode(BaseModel):
     """An input source node feeding one population.
-
-    Poisson is one option among several. Separating stimulus from population is
-    what makes it cheap to add new drive types later: a new kind is a new branch
-    in the builder, not a change to the schema or the canvas.
     """
 
     id: str
