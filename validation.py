@@ -1,27 +1,13 @@
 """
-Validation in three layers, cheapest first.
+Validation in three layers:
 
-  Layer 1  structural   -- pydantic types + referential integrity of the graph
-  Layer 2  static       -- identifier allowlist + Brian2's equation parser
-  Layer 3  dry run      -- build the real objects and run for ZERO milliseconds
+  Layer 1  structural   -- Pydantic types + graph integrity
+  Layer 2  static       -- identifier allowlist + Brian2 equation parser
+  Layer 3  dry run      -- build the model and run for 0 ms
 
-Layer 3 is the important one and it is worth explaining, because the obvious
-approach is wrong. You cannot check Brian2 unit consistency by inspecting the
-AST or matching regexes: `(v + I)/tau` is dimensionally valid or invalid
-depending on what v, I and tau were declared as, which requires the same
-sympy-backed dimensional algebra Brian2 already implements. Reimplementing it
-means reimplementing it badly.
-
-Measured against Brian2 2.10, unit errors are NOT raised by `Equations(...)` and
-NOT raised by `NeuronGroup(...)`. They surface only during `Network.before_run`,
-which `run()` calls first. So `net.run(0*ms)` triggers the complete check --
-equations, thresholds, resets, synaptic pathways, namespace resolution -- and
-then returns without integrating a single timestep. On a 2500-neuron Brunel
-network that costs about 50 ms.
-
-Layer 2 is not redundant with layer 3: it is the security boundary. Layer 3
-hands user strings to Brian2's code generator, so anything reaching it must
-already be known-safe.
+Brian2's unit checks happen during Network.before_run, so the dry run lets
+Brian2 perform its own dimensional validation without advancing the model.
+Layer 2 keeps user-supplied expressions restricted before they reach Brian2.
 """
 
 from __future__ import annotations
@@ -39,8 +25,7 @@ from schema import NetworkGraph
 
 Severity = Literal["error", "warning"]
 
-# Names any user string may reference without being declared: units, pi/e/inf,
-# Brian2's built-in functions, and the handful of special variables.
+
 _BUILTIN_NAMES: set[str] = (
     set(DEFAULT_UNITS)
     | set(DEFAULT_CONSTANTS)
@@ -98,9 +83,6 @@ def check_structure(graph: NetworkGraph, result: ValidationResult) -> None:
     """Referential integrity: every edge points at a population that exists."""
     pop_ids = graph.population_ids()
 
-    # Ids must be unique within their kind, and across kinds too: the builder
-    # derives Brian2 object names from them, and two objects with the same name
-    # fail deep inside Brian2 with a message that points nowhere useful.
     seen: dict[str, str] = {}
     for kind, items in (("population", graph.populations), ("synapse", graph.synapses),
                         ("input", graph.stimuli), ("monitor", graph.monitors)):
@@ -224,9 +206,7 @@ def _check_param_strings(
                        node_id, f"{field_name}.{key}")
 
 
-#: Numeric stimulus parameters that Brian2 will not complain about but that are
-#: meaningless outside these ranges. `PoissonInput(N=-5)` and `connect(p=3.0)`
-#: both run without error and both mean nothing.
+
 _STIM_RANGES = {
     "n_inputs": (1, None, "a positive whole number of inputs"),
     "probability": (0.0, 1.0, "a connection probability between 0 and 1"),
@@ -405,10 +385,6 @@ def check_static(graph: NetworkGraph, result: ValidationResult) -> None:
             if expr:
                 _check_identifiers(expr, declared, syn.id, fname, result)
 
-    # An event-driven input carries a custom on_pre just like a synapse does,
-    # and it reaches the same code generator, so it earns the same allowlist.
-    # Without this it still fails, but as a raw Brian2 KeyError from the dry run
-    # rather than a message naming the input and the offending identifier.
     for stim in graph.stimuli:
         on_pre = stim.params.get("on_pre")
         if not isinstance(on_pre, str) or not on_pre.strip():
@@ -445,16 +421,7 @@ def _root_cause(exc: BaseException) -> BaseException:
 
 
 def _blame_node(exc: BaseException, graph: NetworkGraph) -> str | None:
-    """Work out which node on the canvas an exception belongs to.
 
-    Brian2's BrianObjectException carries `_brian_objname`, but it names the
-    internal sub-object rather than the group: a bad threshold on population
-    'exc' surfaces as 'exc_spike_thresholder'. Since the builder derives every
-    Brian2 name from the node id, the longest matching prefix wins.
-
-    Without this, unit errors arrive with node_id=None and the UI can report
-    them in the status bar but cannot highlight the node that caused them.
-    """
     from builder import _safe_name
 
     name = None
