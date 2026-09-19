@@ -1,15 +1,5 @@
 """
-Parameter sweeps: vary one constant, run the network, extract one number.
-
-This is the part that answers questions the single-run view cannot. "What is
-the resonant frequency" is a property of one simulation. "How does the
-normalised amplitude at 20 Hz depend on inhibitory strength" is a property of a
-family of them, and no amount of dragging a slider will draw that curve for you.
-
-A sweep point is deliberately just (parameter value -> scalar). Keeping the
-result one-dimensional means it plots without ceremony and composes: sweep g,
-read peak frequency; sweep g, read amplitude at the resonant frequency; sweep
-drive, read CV. Same machinery.
+Parameter sweeps
 """
 
 from __future__ import annotations
@@ -29,14 +19,7 @@ MetricFn = Callable[[dict, dict], float]
 
 
 def _amplitude_at(metrics: dict, options: dict) -> float:
-    """Normalised amplitude at a chosen frequency.
-
-    `at_frequency` may be a number, or "resonant" to track each run's own peak.
-    Tracking the peak answers a different question from holding the frequency
-    fixed: one measures how strong the oscillation is wherever it happens to
-    sit, the other measures how much power survives in a fixed band. Both are
-    legitimate and they can trend in opposite directions, so the choice is
-    explicit rather than guessed.
+    """
     """
     spectrum = metrics["spectrum"]
     target = options.get("at_frequency", "resonant")
