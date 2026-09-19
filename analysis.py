@@ -1,12 +1,5 @@
 """
-Read-out layer: turn monitors into the numbers you actually reason about.
-
-This is the part no existing Brian2 GUI has, and it is the strongest reason for
-this project to exist. Plotting a raster is table stakes. Answering "what is
-this network's resonant frequency, and how sharply is it tuned?" is not.
-
-The spectrum and entropy definitions here match the Brunel pipeline they came
-from, so numbers produced by the app are directly comparable to the notebook.
+Read-out layer
 """
 
 from __future__ import annotations
@@ -213,10 +206,7 @@ def resonant_frequency(
       `A_peak / sqrt(2)`, not `A_peak / 2`. This is the -3 dB width.
 
     Q factor is defined against the half-power width, which is the convention
-    everywhere else, so quoting a Q derived from the FWHM would make this tool's
-    numbers quietly incomparable with anyone else's. The half-power threshold is
-    the higher of the two, so its width is the narrower one and the resulting Q
-    is larger.
+    everywhere.
 
     Either width is NaN when the peak never falls below its threshold inside
     `[low, high]`: the honest answer there is "wider than the window", not a
@@ -326,27 +316,11 @@ def synchrony_index(
 ) -> float:
     """Coefficient of variation of the population rate, corrected for shot noise.
 
-    The naive version -- std(rate)/mean(rate) -- is badly biased and will lie to
-    you. Even a perfectly asynchronous population produces a fluctuating rate
-    estimate, purely because you are counting a finite number of spikes in a
-    finite bin. At low rates that sampling noise dominates, and an asynchronous
-    network scores as highly synchronous.
 
-    The size of that artifact is computable. For N independent Poisson neurons
-    at rate r binned at width dt, the rate estimate has variance r/(N*dt), so
-    the noise floor is CV^2 = 1/(r*N*dt). Subtracting it in quadrature leaves
-    the excess variance actually attributable to synchrony.
-
-    The trace is rebinned to `bin_width` first, and this matters more than it
-    looks. PopulationRateMonitor bins at the simulation timestep, typically
+    The trace is rebinned to `bin_width` first. PopulationRateMonitor bins at the simulation timestep, typically
     0.1 ms, where a 1000-neuron population firing at 16 Hz averages under two
-    spikes per bin. The noise floor there is larger than any real signal, so
-    the correction clips everything to zero and the measure goes blind.
-    Rebinning to 1 ms drops the floor tenfold while leaving every frequency
-    below 500 Hz untouched. Because rebinning is exact averaging, the
-    correction stays exact -- unlike Gaussian smoothing, which attenuates
-    signal and noise by different, kernel-dependent factors.
-
+    spikes per bin. 
+    
     Returns 0.0 for a fully asynchronous population; values approaching and
     exceeding 1 indicate population-wide volleys.
     """
@@ -386,7 +360,7 @@ def classify_regime(
     the line depends on the synaptic model. Exponential synapses low-pass the
     input and systematically reduce CV_ISI relative to the delta-synapse
     networks the AI/SI terminology was coined for, so expect to retune these
-    for your own model. They are arguments precisely so you can.
+    for your own model. 
     """
     if np.isnan(cv_isi) or np.isnan(sync):
         return "insufficient activity"
