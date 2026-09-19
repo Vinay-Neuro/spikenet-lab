@@ -1,9 +1,5 @@
 """
-The one function the API layer calls: graph in, results out.
-
-Nothing here knows about HTTP. That is deliberate -- it keeps this testable from
-a plain script, and it means the same code path serves a FastAPI endpoint, a
-WebSocket handler, a CLI and a parameter sweep without modification.
+The one function the API layer calls.
 """
 
 from __future__ import annotations
