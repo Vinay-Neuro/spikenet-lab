@@ -1,16 +1,5 @@
 """
 Graph -> Brian2 objects.
-
-Note what this module does NOT do: it never renders Python source and calls
-exec() on it. Generating a script and executing it is the tempting shortcut and
-it turns every equation box on the canvas into a remote code execution hole.
-Here the graph is walked and Brian2 objects are constructed directly, so user
-strings only ever reach Brian2's own parser -- which accepts equations, not
-Python.
-
-(Script *export* is still worth having, for users who want to leave the GUI and
-keep working in a notebook. That is `export_script`, and it is one-way: the
-generated text is for the user to read and run themselves, never fed back in.)
 """
 
 from __future__ import annotations
@@ -361,21 +350,12 @@ def build_network(graph: NetworkGraph) -> BuiltNetwork:
 
 def _lit(text: str) -> str:
     """Quote a user string as a Python literal.
-
-    Not optional. Reset blocks are routinely multi-line ("v = V_r\\nw += a"), and
-    interpolating one into '...' produces a raw newline inside a single-quoted
-    string, which is a SyntaxError. repr() picks the right quoting for newlines,
-    embedded quotes and backslashes alike.
     """
     return repr(text)
 
 
 def _stimulus_lines(graph: NetworkGraph) -> list[str]:
     """Render the external inputs.
-
-    Omitting these was a silent, nasty bug: the script compiled and ran but with
-    no drive at all, so the exported version of a working network produced an
-    empty raster and looked like a modelling mistake rather than a missing line.
     """
     lines: list[str] = []
     for stim in graph.stimuli:
@@ -427,10 +407,6 @@ def _stimulus_lines(graph: NetworkGraph) -> list[str]:
 
 def export_script(graph: NetworkGraph) -> str:
     """Render the graph as a standalone Brian2 script the user can keep.
-
-    Purely for reading and re-running outside the app -- the app never
-    re-ingests this text. `test_exported_script_compiles` guards the one
-    property that matters: whatever comes out of here is valid Python.
     """
     L = [
         "from brian2 import *",
