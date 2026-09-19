@@ -1,19 +1,9 @@
 """
-HTTP layer. Thin on purpose: every endpoint is a few lines around a call into
-the library, so the library stays testable without a server running.
+HTTP layer. Thin by design: endpoints wrap library calls so the core remains
+testable without the server.
 
-Two things here are not boilerplate and are worth reading.
-
-1. Simulations run in a *separate process*, not a thread. Brian2 keeps global
-   state (defaultclock, codegen prefs, the object-name registry), so concurrent
-   runs in one interpreter interfere. A process also gives a hard timeout: you
-   cannot kill a Python thread, so a user who types `duration = 500*second`
-   would otherwise hang the server permanently with no way back short of
-   Ctrl-C.
-
-2. Validation does NOT run in that process. It is fast (~50 ms) and runs inline,
-   because the UI calls it on every keystroke and the round trip through a
-   process pool would cost more than the check itself.
+Simulations use separate processes for isolation and hard timeouts.
+Validation stays inline because it is fast enough to run on every edit.
 """
 
 from __future__ import annotations
@@ -33,9 +23,7 @@ from builder import export_script
 from schema import NetworkGraph
 from validation import validate
 
-#: Everything lives in one directory, so both of these sit next to this file.
-#: Resolving against __file__ rather than the working directory means the
-#: server behaves the same however you launch it.
+
 HERE = Path(__file__).resolve().parent
 INDEX_HTML = HERE / "index.html"
 
@@ -44,8 +32,7 @@ def _example_path() -> Path | None:
     path = HERE / "brunel.json"
     return path if path.is_file() else None
 
-# Guard rails. A local tool, but the browser will happily post `n = 100000` and
-# a 60 second duration, and the resulting wait looks identical to a crash.
+# Guard rails
 MAX_NEURON_SECONDS = float(os.environ.get("SPIKENET_MAX_NEURON_SECONDS", 2_000_000))
 SIM_TIMEOUT = float(os.environ.get("SPIKENET_TIMEOUT", 120))
 MAX_SPIKES_RETURNED = 20_000
@@ -101,8 +88,7 @@ def _worker(payload: dict) -> dict:
     data = result.to_json()
 
     # Subsample rasters before they cross the process boundary and again before
-    # they cross the network. 200k spikes is 5 MB of JSON that no browser will
-    # draw legibly anyway.
+    # they cross the network. 
     for raster in data.get("rasters", {}).values():
         times, indices = raster["t"], raster["i"]
         if len(times) > MAX_SPIKES_RETURNED:
@@ -116,13 +102,6 @@ def _worker(payload: dict) -> dict:
 
 def _init_worker() -> None:
     """Restore default signal handling in the child.
-
-    ProcessPoolExecutor forks, so the worker inherits uvicorn's SIGTERM handler,
-    which only sets a "should exit gracefully" flag and returns. A forked child
-    running Brian2 therefore *ignores* `Process.terminate()` entirely and keeps
-    burning CPU. Resetting to SIG_DFL here makes termination work as expected;
-    `reset()` sends SIGKILL as well, since neither costs anything and this took
-    an embarrassingly long time to track down once.
     """
     import contextlib
     import signal
@@ -133,7 +112,7 @@ def _init_worker() -> None:
 
 
 class _Pool:
-    """One worker, replaced wholesale if a run overruns its timeout."""
+    """"""
 
     def __init__(self) -> None:
         self._pool: ProcessPoolExecutor | None = None
@@ -157,12 +136,7 @@ class _Pool:
             raise
 
     def reset(self) -> None:
-        """Tear the pool down, killing the worker rather than orphaning it.
-
-        `shutdown(wait=False)` only stops new work being scheduled; a child
-        already mid-simulation keeps running until it finishes on its own.
-        After a timeout that run is by definition unwanted, so kill it.
-        `_processes` is private API, hence the defensive getattr.
+        """
         """
         if self._pool is None:
             return
@@ -250,9 +224,6 @@ def api_validate(payload: GraphPayload) -> dict:
     try:
         report = validate(graph, dry_run=True)
     except Exception as exc:
-        # The UI calls this on every keystroke and shows the result inline. An
-        # unhandled exception here would surface as a bare 500 with nothing to
-        # act on, so degrade to a diagnostic instead.
         return {"ok": False, "diagnostics": [{
             "severity": "error",
             "message": f"Validation failed unexpectedly: {type(exc).__name__}: {exc}",
@@ -363,11 +334,7 @@ def health() -> dict:
 
 @app.get("/")
 def index() -> FileResponse:
-    """Serve the one HTML file directly.
-
-    Deliberately not a StaticFiles mount on this directory: the page is
-    entirely self-contained, and mounting the project root would happily serve
-    every .py file next to it over HTTP.
+    """
     """
     if not INDEX_HTML.is_file():
         raise HTTPException(status_code=404, detail="index.html is missing.")
