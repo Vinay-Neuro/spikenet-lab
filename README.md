@@ -6,9 +6,7 @@ SpikeNet Lab represents a network as a graph of **populations, synapses, inputs,
 
 The default example is a recurrent excitatory-inhibitory (Brunel-style) network.
 
-> **Status: Just a fun prototype.** Feel free to reach out to me (@dr.vinay.neuro@gmail.com) with any suggestions or ideas.
->
-> This is intended for exploration and experimentation rather than as a validated reference simulator. The simulation engine is Brian2; SpikeNet Lab adds the graph representation, validation, interface, analysis, and parameter-sweep layers.
+**Status: Just a fun prototype.** Feel free to reach out to me (@dr.vinay.neuro@gmail.com) with any suggestions or ideas. This is intended for exploration and experimentation rather than as a validated reference simulator. The simulation engine is Brian2; SpikeNet Lab adds the graph representation, validation, interface, analysis, and parameter-sweep layers.
 
 ## Quick start
 
