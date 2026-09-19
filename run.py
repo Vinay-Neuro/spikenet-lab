@@ -4,14 +4,7 @@
     pip install -r requirements.txt
     python run.py
 
-Everything lives in this one directory. There is no package to install and no
-subfolder to change into.
-
-The two checks below exist because the failure modes they catch are both common
-and both produce errors that point at the wrong thing. A missing dependency
-gives you an ImportError deep inside Brian2; a missing source file gives you
-"No module named 'builder'", which sounds like a broken install rather than an
-incomplete download.
+Everything lives in this one directory.
 """
 
 import sys
