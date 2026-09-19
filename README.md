@@ -47,37 +47,7 @@ A SpikeNet Lab network is made from four object types:
 
 The graph is stored as JSON. It describes the network rather than Python source code or Brian2 class names; the backend performs the translation.
 
-
-### Communication between populations
-
-A source neuron emits a spike when its threshold is crossed; the synapse defines the event-triggered effect; the target neuron's equations determine how that state evolves.
-
-```text
-source spike
-    ↓
-on_pre / on_post
-    ↓
-target or synapse state changes
-    ↓
-target equations evolve that state
-    ↓
-future network activity
-```
-
-For example:
-
-```text
-on_pre:
-    s_e_post += J
-```
-
-combined with a target equation such as
-
-```text
-ds_e/dt = -s_e/tau_syn_e : volt
-```
-
-means that a presynaptic spike gives the target an instantaneous synaptic increment, after which that synaptic variable decays according to the target dynamics.
+Synapses define the event-triggered effect of spikes, while the receiving population's equations determine how that effect evolves over time.
 
 ## Using the interface
 
@@ -120,7 +90,7 @@ The Q factor uses the half-power bandwidth:
 Q = f0 / Δf_-3dB
 ```
 
-The synchrony metric corrects for fluctuations that arise simply because a finite asynchronous population produces a noisy rate estimate. The correction is based on the Poisson counting-noise floor rather than treating all rate variance as synchrony.
+Synchrony: population-level coordination, with a correction for finite-size noise.
 
 ## Parameter sweeps
 
@@ -158,39 +128,15 @@ Physical quantities are stored as strings with explicit units, for example `20*m
 
 The generated Python is a **one-way export** for inspection, copying, and use in a notebook or script. The application does not read that generated script back into the graph.
 
-## Validation and safety
 
-Validation is layered:
+## Safety and limitations
 
-1. **Structural:** schema validation, unique identifiers, and valid references.
-2. **Static:** restricted parsing of identifiers and unit expressions; `eval()` is not used on user input.
-3. **Brian2 validation:** the graph is built as real Brian2 objects and passed through a zero-duration `run(0*ms)` so model-level checks happen before an actual simulation.
+SpikeNet Lab checks the network and user-supplied expressions before simulation and does not use `eval()` on UI input.
 
-Simulation runs use separate worker processes, with configurable time and neuron-seconds limits.
+Simulations run in separate processes with configurable time and resource limits.
 
-The default server binds to `127.0.0.1` and has no authentication; it is intended for a trusted local user.
+The server is intended for local use and has no authentication.
 
-## Project layout
-
-```text
-spikenet-lab/
-├── run.py
-├── index.html
-├── brunel.json
-├── requirements.txt
-├── schema.py
-├── safe_units.py
-├── validation.py
-├── builder.py
-├── analysis.py
-├── sweep.py
-├── runner.py
-├── server.py
-├── spikenet.py
-├── demo.py
-├── test_spikenet.py
-└── smoke.js
-```
 
 
 ## Extending the simulator
@@ -202,8 +148,6 @@ spikenet-lab/
 **New panel:** add the panel type and its drawing function in the frontend.
 
 ## Testing
-
-The test suite covers the validation stack, safe expression handling, analysis functions, parameter sweeps, JSON round trips, and exported-script consistency. The frontend also has a headless `jsdom` smoke test covering core interaction paths.
 
 ```bash
 python -m pytest test_spikenet.py -q
