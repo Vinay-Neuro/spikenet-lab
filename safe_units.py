@@ -1,13 +1,5 @@
 """
-Safe evaluation of unit-bearing parameter strings coming from the UI.
-
-The frontend sends physical parameters as strings ("20*ms", "0.1*mV", "4.5").
-We must turn those into Brian2 Quantities WITHOUT calling eval() on user input.
-
-Strategy: parse to a Python AST, then walk it with an interpreter that supports
-only arithmetic and name lookups resolved against an explicit allowlist of
-Brian2 units and constants. Anything else -- attribute access, calls,
-subscripts, comprehensions -- is rejected before it can be evaluated.
+Safely evaluate UI-supplied unit expressions without eval(), using a restricted AST interpreter and explicit Brian2 allowlist.
 """
 
 from __future__ import annotations
@@ -51,11 +43,7 @@ _BINOPS = {
 
 _UNARYOPS = {ast.USub: operator.neg, ast.UAdd: operator.pos}
 
-#: `**` is a denial-of-service in five characters. `9**9**9` asks Python to
-#: build an integer with hundreds of millions of digits and never returns, and
-#: because validation runs inline in the web process rather than in the
-#: simulation worker, that hangs the whole server with no timeout to rescue it.
-#: No physical parameter needs an exponent anywhere near this.
+
 _MAX_EXPONENT = 64
 
 # Names a parameter string is allowed to reference: every Brian2 unit
