@@ -1,4 +1,3 @@
-# Everything SpikeNet Lab needs.
 #   pip install -r requirements.txt
 #   python run.py
 
