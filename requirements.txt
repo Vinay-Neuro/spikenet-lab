@@ -1,0 +1,13 @@
+# Everything SpikeNet Lab needs.
+#   pip install -r requirements.txt
+#   python run.py
+
+brian2>=2.6
+numpy
+scipy
+pydantic>=2.0
+fastapi>=0.110
+uvicorn[standard]>=0.27
+
+# only needed to run the test suite
+pytest

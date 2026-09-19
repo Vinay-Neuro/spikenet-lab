@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SpikeNet Lab</title>
+<style>
+  :root{
+    --bg:#0b0d12; --panel:#12151c; --panel2:#171b24; --panel3:#1c212c;
+    --line:#252b38; --line2:#333b4d;
+    --text:#dde2ea; --dim:#98a1b3; --muted:#6b7488;
+    --exc:#5aa2ff; --inh:#ff6b6e; --stim:#f5b942; --ok:#4ecb8d;
+    --err:#ff5f5f; --warn:#f5b942; --accent:#7c8cff; --grid:#1b2029;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font:13px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    display:flex; flex-direction:column; overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono,code,pre,textarea,input[type=text],input[type=number]{
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    font-variant-numeric:tabular-nums;
+  }
+
+  header{
+    display:flex; align-items:center; gap:6px; padding:7px 12px;
+    background:linear-gradient(180deg,#161a23,#12151c);
+    border-bottom:1px solid var(--line); flex:none;
+  }
+  header .brand{font-size:14px;font-weight:650;letter-spacing:.2px;margin-right:10px}
+  header .brand em{color:var(--muted);font-style:normal;font-weight:400;font-size:11.5px}
+  .sep{width:1px;height:20px;background:var(--line);margin:0 5px}
+  button{
+    background:var(--panel3); color:var(--text); border:1px solid var(--line2);
+    border-radius:6px; padding:5px 10px; cursor:pointer; font-size:12px;
+    font-family:inherit; transition:background .12s,border-color .12s;
+  }
+  button:hover:not(:disabled){background:#242b39;border-color:#414b60}
+  button.primary{background:var(--exc);border-color:var(--exc);color:#04101f;font-weight:650}
+  button.primary:hover:not(:disabled){background:#79b5ff}
+  button.on{background:var(--accent);border-color:var(--accent);color:#07091a;font-weight:600}
+  button.danger:hover:not(:disabled){border-color:var(--err);color:var(--err)}
+  button:disabled{opacity:.4;cursor:default}
+  button.icon{padding:4px 8px;font-size:13px;line-height:1}
+  .spacer{flex:1}
+  .pill{font-size:10.5px;padding:2px 8px;border-radius:99px;
+        border:1px solid var(--line2);color:var(--dim)}
+
+  main{flex:1;display:flex;min-height:0}
+  #canvasWrap{flex:1;position:relative;min-width:0;
+    background:radial-gradient(circle at 1px 1px,#1a1f2a 1px,transparent 0) 0 0/24px 24px,var(--bg)}
+  svg#canvas{width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+  svg#canvas.connecting{cursor:crosshair}
+  .overlay{position:absolute;pointer-events:none;font-size:11px;color:var(--muted)}
+  #hint{left:12px;bottom:10px;background:rgba(11,13,18,.9);padding:5px 10px;
+        border-radius:6px;border:1px solid var(--line)}
+  #legend{right:12px;top:10px;background:rgba(11,13,18,.9);padding:7px 10px;
+        border-radius:6px;border:1px solid var(--line);line-height:1.7}
+  #legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+
+  aside{width:376px;flex:none;background:var(--panel);border-left:1px solid var(--line);
+        overflow-y:auto;padding:10px}
+  .sec{border:1px solid var(--line);border-radius:8px;margin-bottom:9px;background:var(--panel2)}
+  .sec>h3{margin:0;padding:8px 10px;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.8px;color:var(--dim);border-bottom:1px solid var(--line);
+    cursor:pointer;user-select:none;font-weight:650;display:flex;gap:6px;align-items:center}
+  .sec>.body{padding:10px}
+  .row{margin-bottom:9px}.row:last-child{margin-bottom:0}
+  label{display:block;font-size:11px;color:var(--dim);margin-bottom:3px}
+  input,select,textarea{width:100%;background:#0d1016;color:var(--text);
+    border:1px solid var(--line2);border-radius:5px;padding:5px 7px;font-size:12px;
+    font-family:inherit}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--exc)}
+  textarea{resize:vertical;min-height:56px;line-height:1.5;font-size:11.5px}
+  select{cursor:pointer}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+  .kv{display:grid;grid-template-columns:1fr 1.15fr auto;gap:5px;margin-bottom:5px;align-items:center}
+  .kv button{padding:3px 7px}
+  .sl{margin-bottom:11px}
+  .sl .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+  .sl .nm{font-size:11.5px;color:var(--text)}
+  .sl .unit{font-size:10px;color:var(--muted)}
+  .sl .ctl{display:grid;grid-template-columns:1fr 92px;gap:7px;align-items:center}
+  .sl input[type=range]{padding:0;accent-color:var(--exc);height:16px}
+  .sl input[type=number]{padding:3px 5px;font-size:11px;text-align:right}
+  .chk{display:flex;align-items:center;gap:7px;margin-bottom:6px;font-size:12px}
+  .chk input{width:auto;cursor:pointer}
+  .note{font-size:11px;color:var(--muted);line-height:1.55}
+  .role{font-size:11px;line-height:1.7}
+  .role .tag{display:inline-block;padding:0 6px;border-radius:3px;font-size:10px;
+    font-weight:600;margin-right:5px}
+  .tag.e{background:rgba(90,162,255,.18);color:var(--exc)}
+  .tag.i{background:rgba(255,107,110,.18);color:var(--inh)}
+  .tag.s{background:rgba(245,185,66,.18);color:var(--stim)}
+
+  #results{flex:none;height:326px;border-top:1px solid var(--line);
+    background:var(--panel);display:flex;flex-direction:column;overflow:hidden}
+  #panels{flex:1;display:flex;gap:1px;background:var(--line);min-height:0;overflow-x:auto}
+  .pnl{flex:1 1 0;min-width:252px;background:var(--panel);display:flex;
+       flex-direction:column;min-height:0}
+  .pnl>.hd{display:flex;align-items:center;gap:5px;padding:5px 7px;
+    border-bottom:1px solid var(--line);flex:none;background:var(--panel2)}
+  .pnl>.hd select{width:auto;flex:1;min-width:0;padding:3px 5px;font-size:11px;
+    background:transparent;border-color:transparent;color:var(--text);font-weight:600}
+  .pnl>.hd select:hover{border-color:var(--line2);background:#0d1016}
+  .pnl>.hd select.sub{flex:0 1 auto;font-weight:400;color:var(--dim);font-size:10.5px}
+  .pnl>.bd{flex:1;min-height:0;position:relative;display:flex;flex-direction:column}
+  .pnl svg,.pnl canvas{flex:1;width:100%;min-height:0;display:block}
+  .pnl .scroll{flex:1;overflow-y:auto;padding:8px 10px}
+  .empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:var(--muted);font-size:11.5px;text-align:center;padding:16px;pointer-events:none}
+
+  #transport{flex:none;border-top:1px solid var(--line);background:var(--panel2);
+    padding:6px 10px;display:flex;align-items:center;gap:10px}
+  #transport .scrub{flex:1;min-width:80px}
+  #transport input[type=range]{accent-color:var(--stim);padding:0}
+  #clock{font-size:11.5px;color:var(--text);min-width:118px}
+  #clock b{color:var(--stim);font-weight:650}
+  #tmap{font-size:10.5px;color:var(--muted);min-width:190px;text-align:right}
+  #transport select{width:auto;padding:3px 6px;font-size:11px}
+
+  table.mt{width:100%;border-collapse:collapse;font-size:11.5px}
+  table.mt td{padding:3px 0;border-bottom:1px solid rgba(37,43,56,.6)}
+  table.mt td:first-child{color:var(--dim)}
+  table.mt td:last-child{text-align:right;font-family:ui-monospace,monospace;
+    font-variant-numeric:tabular-nums}
+  .badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:10.5px;
+    font-weight:650;margin-bottom:7px}
+
+  #status{flex:none;border-top:1px solid var(--line);background:var(--panel);
+    max-height:104px;overflow-y:auto;padding:5px 12px;font-size:11.5px}
+  .diag{padding:2px 0;display:flex;gap:8px;align-items:baseline}
+  .diag .sev{font-weight:700;flex:none;min-width:50px;font-size:10px;text-transform:uppercase}
+  .diag.error .sev{color:var(--err)}
+  .diag.warning .sev{color:var(--warn)}
+  .diag .where{color:var(--exc);flex:none;font-family:ui-monospace,monospace;font-size:11px}
+
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line2);
+    border-radius:10px;padding:0;max-width:820px;width:92vw}
+  dialog::backdrop{background:rgba(0,0,0,.65)}
+  dialog pre{margin:0;padding:14px;max-height:62vh;overflow:auto;font-size:12px;
+    background:#0a0c11;white-space:pre;line-height:1.5}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:#2b3242;border-radius:5px}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">SpikeNet Lab <em>Brian2 network designer</em></div>
+  <button id="btnAddPop">+ Population</button>
+  <button id="btnAddStim">+ Input</button>
+  <button id="btnConnect">Connect</button>
+  <button id="btnDelete" class="danger">Delete</button>
+  <div class="sep"></div>
+  <button id="btnAddPanel">+ Panel</button>
+  <div class="spacer"></div>
+  <span id="tag" class="pill" style="display:none"></span>
+  <button id="btnExample">Example</button>
+  <button id="btnImport">Import</button>
+  <button id="btnSave">Save</button>
+  <button id="btnExport">Code</button>
+  <button id="btnRun" class="primary">Run</button>
+</header>
+
+<main>
+  <div id="canvasWrap">
+    <svg id="canvas">
+      <defs>
+        <marker id="arrowE" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6"
+                markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#5aa2ff"/></marker>
+        <marker id="arrowI" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6"
+                markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#ff6b6e"/></marker>
+        <marker id="arrowS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6"
+                markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#f5b942"/></marker>
+      </defs>
+      <g id="viewport">
+        <g id="edgeLayer"></g>
+        <g id="nodeLayer"></g>
+      </g>
+    </svg>
+    <div class="overlay" id="legend">
+      <div><i style="background:#5aa2ff"></i>excitatory output</div>
+      <div><i style="background:#ff6b6e"></i>inhibitory output</div>
+      <div><i style="background:#f5b942"></i>external input</div>
+      <div style="color:#6b7488;margin-top:3px">halo brightness = live rate</div>
+    </div>
+    <div class="overlay" id="hint">Drag nodes · drag background to pan · scroll to zoom</div>
+  </div>
+  <aside id="inspector"></aside>
+</main>
+
+<div id="results">
+  <div id="panels"></div>
+  <div id="transport">
+    <button id="btnPlay" class="icon" title="Play / pause (space)">▶</button>
+    <button id="btnLoop" class="icon on" title="Loop">↻</button>
+    <input type="range" id="scrub" class="scrub" min="0" max="1" step="0.001" value="0">
+    <span id="clock" class="mono">— / —</span>
+    <select id="speed" title="Playback speed">
+      <option value="1">1× real time</option>
+      <option value="0.5">0.5×</option>
+      <option value="0.2">0.2×</option>
+      <option value="0.1" selected>0.1×</option>
+      <option value="0.05">0.05×</option>
+      <option value="0.02">0.02×</option>
+      <option value="0.01">0.01×</option>
+    </select>
+    <span id="tmap"></span>
+  </div>
+</div>
+
+<div id="status"><div class="note">Ready.</div></div>
+
+<dialog id="codeDialog">
+  <header><div class="brand">Generated Brian2 script</div><div class="spacer"></div>
+    <button id="btnCopyCode">Copy</button>
+    <button onclick="document.getElementById('codeDialog').close()">Close</button></header>
+  <pre id="codeText"></pre>
+</dialog>
+
+<input type="file" id="fileInput" accept=".json" style="display:none">
+
+<script>
+"use strict";
+
+// =====================================================================
+// State
+// =====================================================================
+
+const NODE_W = 184, NODE_H = 78, STIM_W = 152, STIM_H = 54;
+
+let graph = null;
+let selection = null;
+let connectMode = false, connectFrom = null;
+let view = {tx:60, ty:50, s:1};
+let diagnostics = [], lastResult = null, running = false;
+let validateTimer = null, autoRunTimer = null, autoRun = false;
+let sliderMax = {};
+let panels = [];
+let anim = null;
+let play = {on:false, t:0, speed:0.1, loop:true, raf:null, last:0};
+let metricCatalog = [];
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
+
+function emptyGraph(){
+  return {version:"1", name:"untitled network", globals:{}, populations:[],
+          synapses:[], stimuli:[], monitors:[],
+          run:{duration:"1*second", dt:"0.1*ms", transient:"0.2*second",
+               seed:1234, codegen_target:"numpy"}};
+}
+
+function uid(prefix){
+  const taken = new Set([...graph.populations, ...graph.synapses, ...graph.stimuli]
+    .map(x => x.id));
+  let n = 1, id;
+  do { id = prefix + (n++); } while (taken.has(id));
+  return id;
+}
+
+/**
+ * Make an incoming graph safe to render and drag.
+ *
+ * Graphs arrive from the server, from a file the user imports, and from
+ * hand-edited JSON. Any of them may omit optional fields. That matters most
+ * for `position`: dragging a node whose position is missing computes
+ * `undefined + number` = NaN, JSON.stringify writes NaN as null, and the run
+ * is then rejected over a purely cosmetic field. Fill the gaps on the way in.
+ */
+function normaliseGraph(g){
+  g = g || {};
+  g.version = g.version || "1";
+  g.name = g.name || "untitled network";
+  g.globals = g.globals || {};
+  g.populations = g.populations || [];
+  g.synapses = g.synapses || [];
+  g.stimuli = g.stimuli || [];
+  g.monitors = g.monitors || [];
+  g.run = Object.assign({duration:"1*second", dt:"0.1*ms", transient:"0*second",
+                         seed:null, codegen_target:"numpy"}, g.run || {});
+
+  const usable = (p) => p && Number.isFinite(+p.x) && Number.isFinite(+p.y);
+  const place = (item, fb) => {
+    item.position = usable(item.position) ? {x:+item.position.x, y:+item.position.y} : fb;
+  };
+  g.populations.forEach((p,i) => place(p, {x:150 + i*290, y:120 + (i%2)*40}));
+  g.stimuli.forEach((s,i) => {
+    const t = g.populations.find(p => p.id === s.target);
+    place(s, t ? {x:t.position.x - 225, y:t.position.y + 8} : {x:-170, y:110 + i*95});
+  });
+  g.synapses.forEach(s => { if (s.n_per_pair == null) s.n_per_pair = 1; });
+  return g;
+}
+
+// =====================================================================
+// Graph queries.  E/I identity lives on EDGES, not on nodes.
+// =====================================================================
+
+const popById = (id) => graph.populations.find(p => p.id === id);
+
+/** A synapse is inhibitory if its pathway subtracts from the target. */
+function synIsInhibitory(syn){
+  return /-=|\+=\s*-/.test(syn.on_pre || "");
+}
+
+/**
+ * Whether a population is excitatory or inhibitory is decided by what its
+ * OUTGOING synapses do to their targets, never by which variables it declares.
+ * A cell that receives both s_e and s_i is normal: those are its two input
+ * channels. Confusing "what I receive" with "what I send" is the commonest
+ * misreading of a Brunel-style model.
+ */
+function popRole(pop){
+  const out = graph.synapses.filter(s => s.source === pop.id);
+  if (!out.length) return {role:"unconnected", inhib:0, exc:0};
+  const inhib = out.filter(synIsInhibitory).length;
+  return {role: inhib > out.length/2 ? "inhibitory" : "excitatory",
+          inhib, exc: out.length - inhib};
+}
+const isInhibitory = (pop) => popRole(pop).role === "inhibitory";
+
+function nodeBox(item, kind){
+  const w = kind === "stimulus" ? STIM_W : NODE_W;
+  const h = kind === "stimulus" ? STIM_H : NODE_H;
+  const p = item.position || {x:0, y:0};
+  return {x:p.x, y:p.y, w, h, cx:p.x + w/2, cy:p.y + h/2};
+}
+function findItem(kind, id){
+  const list = kind === "population" ? graph.populations
+             : kind === "synapse" ? graph.synapses : graph.stimuli;
+  return list.find(x => x.id === id);
+}
+function nodeSeverity(id){
+  let worst = null;
+  for (const d of diagnostics){
+    if (d.node_id !== id) continue;
+    if (d.severity === "error") return "error";
+    worst = worst || d.severity;
+  }
+  return worst;
+}
+
+// =====================================================================
+// Canvas
+// =====================================================================
+
+function renderCanvas(){
+  $("viewport").setAttribute("transform",
+    `translate(${view.tx},${view.ty}) scale(${view.s})`);
+
+  const edges = [], nodes = [], seen = {};
+
+  for (const syn of graph.synapses){
+    const a = popById(syn.source), b = popById(syn.target);
+    if (!a || !b) continue;
+    const A = nodeBox(a,"population"), B = nodeBox(b,"population");
+    const key = syn.source + ">" + syn.target;
+    const rank = (seen[key] = (seen[key] || 0) + 1) - 1;
+    const inh = synIsInhibitory(syn);
+    const col = inh ? "#ff6b6e" : "#5aa2ff";
+    const sel = selection && selection.kind === "synapse" && selection.id === syn.id;
+    const d = syn.source === syn.target ? selfLoop(A, rank) : edgePath(A, B, rank);
+    const lp = midOf(d);
+    const conn = syn.probability != null ? `p=${syn.probability}` : (syn.condition || "all");
+    edges.push(`<g class="edge" data-kind="synapse" data-id="${esc(syn.id)}">
+      <path d="${d}" fill="none" stroke="transparent" stroke-width="18"/>
+      <path d="${d}" fill="none" stroke="${col}" stroke-width="${sel?2.8:1.7}"
+            marker-end="url(#${inh?'arrowI':'arrowE'})" opacity="${sel?1:.8}"/>
+      <text x="${lp.x}" y="${lp.y}" fill="${sel?col:'#6b7488'}" font-size="10"
+            text-anchor="middle">${esc(syn.label)} · ${esc(conn)}</text></g>`);
+  }
+
+  for (const st of graph.stimuli){
+    const t = popById(st.target);
+    if (!t) continue;
+    const A = nodeBox(st,"stimulus"), B = nodeBox(t,"population");
+    edges.push(`<path d="${edgePath(A,B,0)}" fill="none" stroke="#f5b942"
+      stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrowS)" opacity=".75"/>`);
+  }
+
+  for (const pop of graph.populations){
+    const B = nodeBox(pop,"population");
+    const sel = selection && selection.kind === "population" && selection.id === pop.id;
+    const sev = nodeSeverity(pop.id);
+    const role = popRole(pop);
+    const col = role.role === "inhibitory" ? "#ff6b6e"
+              : role.role === "unconnected" ? "#6b7488" : "#5aa2ff";
+    const stroke = sev === "error" ? "#ff5f5f" : (sel ? col : "#333b4d");
+    const kinds = graph.monitors.filter(m => m.target === pop.id)
+                    .map(m => ({spike:"R", rate:"F", state:"V"})[m.kind] || "").join("");
+    const act = liveRate(pop.id);
+    nodes.push(`<g class="node" data-kind="population" data-id="${esc(pop.id)}"
+        transform="translate(${B.x},${B.y})" style="cursor:move">
+      ${act > 0.01 ? `<rect x="-4" y="-4" width="${B.w+8}" height="${B.h+8}" rx="13"
+          fill="none" stroke="${col}" stroke-width="${1+act*4}" opacity="${(act*0.7).toFixed(3)}"/>` : ""}
+      <rect width="${B.w}" height="${B.h}" rx="10" fill="#171b24"
+            stroke="${stroke}" stroke-width="${sel||sev==='error'?2:1}"/>
+      <rect width="4" height="${B.h}" rx="2" fill="${col}"/>
+      <text x="15" y="23" fill="#dde2ea" font-size="13.5" font-weight="650">${esc(pop.label)}</text>
+      <text x="15" y="41" fill="#98a1b3" font-size="11">N=${pop.n} · ${esc(role.role)}</text>
+      <text x="15" y="60" fill="#6b7488" font-size="10" font-family="ui-monospace,monospace">${esc(eqPreview(pop.equations))}</text>
+      ${kinds ? `<text x="${B.w-13}" y="23" fill="#4ecb8d" font-size="10"
+            text-anchor="end" font-weight="700">${kinds}</text>` : ""}
+      ${sev==="error" ? `<circle cx="${B.w-13}" cy="${B.h-13}" r="4.5" fill="#ff5f5f"/>` : ""}
+    </g>`);
+  }
+
+  for (const st of graph.stimuli){
+    const B = nodeBox(st,"stimulus");
+    const sel = selection && selection.kind === "stimulus" && selection.id === st.id;
+    const from = connectFrom && connectFrom.id === st.id;
+    nodes.push(`<g class="node" data-kind="stimulus" data-id="${esc(st.id)}"
+        transform="translate(${B.x},${B.y})" style="cursor:move">
+      <rect width="${B.w}" height="${B.h}" rx="10" fill="#171b24"
+            stroke="${sel||from?'#f5b942':'#333b4d'}"
+            stroke-width="${sel||from?2:1}" stroke-dasharray="5 3"/>
+      <rect width="4" height="${B.h}" rx="2" fill="#f5b942"/>
+      <text x="14" y="22" fill="#dde2ea" font-size="12.5" font-weight="650">${esc(st.label)}</text>
+      <text x="14" y="40" fill="#98a1b3" font-size="10.5">${esc(st.kind)} → ${esc(st.target||"—")}</text>
+    </g>`);
+  }
+
+  $("edgeLayer").innerHTML = edges.join("");
+  $("nodeLayer").innerHTML = nodes.join("");
+}
+
+function eqPreview(eq){
+  const l = String(eq||"").split("\n").find(x => x.trim()) || "";
+  return l.length > 31 ? l.slice(0,29) + "…" : l;
+}
+function edgePath(A,B,rank){
+  const dx = B.cx-A.cx, dy = B.cy-A.cy, len = Math.hypot(dx,dy)||1;
+  const ux = dx/len, uy = dy/len;
+  const x1 = A.cx+ux*(A.w/2.05), y1 = A.cy+uy*(A.h/1.75);
+  const x2 = B.cx-ux*(B.w/2.05), y2 = B.cy-uy*(B.h/1.75);
+  const off = rank ? (rank%2?1:-1)*Math.ceil(rank/2)*48 : 0;
+  return `M${x1},${y1} Q${(x1+x2)/2-uy*off},${(y1+y2)/2+ux*off} ${x2},${y2}`;
+}
+function selfLoop(A,rank){
+  const r = 50+rank*18;
+  return `M${A.cx-24},${A.y} C${A.cx-r},${A.y-r*1.5} ${A.cx+r},${A.y-r*1.5} ${A.cx+24},${A.y}`;
+}
+function midOf(d){
+  const n = (d.match(/-?\d+(\.\d+)?/g)||[0,0,0,0,0,0]).map(Number);
+  return d.includes("Q") ? {x:(n[0]+n[2]*2+n[4])/4, y:(n[1]+n[3]*2+n[5])/4-7}
+                         : {x:n[0], y:n[1]-11};
+}
+
+function toWorld(e){
+  const r = $("canvas").getBoundingClientRect();
+  return {x:(e.clientX-r.left-view.tx)/view.s, y:(e.clientY-r.top-view.ty)/view.s};
+}
+
+$("canvas").addEventListener("pointerdown", (e) => {
+  const g = e.target.closest(".node, .edge");
+
+  if (g && connectMode){
+    const kind = g.dataset.kind, id = g.dataset.id;
+    if (!connectFrom){
+      if (kind === "population" || kind === "stimulus"){
+        connectFrom = {kind, id};
+        setHint(kind === "stimulus"
+          ? `Input "${id}" selected — now click the population it should drive.`
+          : `Source "${id}" selected — now click the target population.`);
+        renderCanvas();
+      }
+      return;
+    }
+    if (kind === "population"){
+      if (connectFrom.kind === "population") addSynapse(connectFrom.id, id);
+      else retargetStimulus(connectFrom.id, id);
+      setConnectMode(false);
+    } else {
+      setHint("Inputs cannot be a target. Click a population.");
+    }
+    return;
+  }
+
+  if (g){
+    select(g.dataset.kind, g.dataset.id);
+    if (g.classList.contains("node")) startDrag(g, e);
+    return;
+  }
+
+  select(null);
+  const sx = e.clientX, sy = e.clientY, tx = view.tx, ty = view.ty;
+  const mv = (ev) => { view.tx = tx+ev.clientX-sx; view.ty = ty+ev.clientY-sy; renderCanvas(); };
+  const up = () => { window.removeEventListener("pointermove",mv);
+                     window.removeEventListener("pointerup",up); };
+  window.addEventListener("pointermove",mv); window.addEventListener("pointerup",up);
+});
+
+function startDrag(g, e){
+  const item = findItem(g.dataset.kind, g.dataset.id);
+  if (!item) return;
+  const start = toWorld(e);
+  const ok = item.position && Number.isFinite(+item.position.x)
+             && Number.isFinite(+item.position.y);
+  const base = ok ? {x:+item.position.x, y:+item.position.y} : {x:0, y:0};
+  const mv = (ev) => {
+    const p = toWorld(ev);
+    const nx = Math.round(base.x + p.x - start.x), ny = Math.round(base.y + p.y - start.y);
+    if (!Number.isFinite(nx) || !Number.isFinite(ny)) return;
+    item.position = {x:nx, y:ny};
+    renderCanvas();
+  };
+  const up = () => { window.removeEventListener("pointermove",mv);
+                     window.removeEventListener("pointerup",up); };
+  window.addEventListener("pointermove",mv); window.addEventListener("pointerup",up);
+}
+
+$("canvas").addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const r = $("canvas").getBoundingClientRect();
+  const mx = e.clientX-r.left, my = e.clientY-r.top;
+  const s2 = clamp(view.s*Math.exp(-e.deltaY*0.0016), 0.25, 2.6);
+  view.tx = mx-(mx-view.tx)*(s2/view.s); view.ty = my-(my-view.ty)*(s2/view.s);
+  view.s = s2; renderCanvas();
+}, {passive:false});
+
+function select(kind,id){ selection = kind?{kind,id}:null; renderCanvas(); renderInspector(); }
+function setHint(t){ $("hint").textContent = t; }
+function setConnectMode(on){
+  connectMode = on; connectFrom = null;
+  $("btnConnect").classList.toggle("on", on);
+  $("canvas").classList.toggle("connecting", on);
+  setHint(on ? "Click a population or an input to start the connection."
+             : "Drag nodes · drag background to pan · scroll to zoom");
+  renderCanvas();
+}
+
+// =====================================================================
+// Graph edits
+// =====================================================================
+
+function addPopulation(){
+  const id = uid("pop");
+  graph.populations.push({
+    id, label:id, n:400,
+    equations:"dv/dt = (-v + s_e + s_i)/tau_m : volt\n"
+             +"ds_e/dt = -s_e/tau_syn_e : volt\n"
+             +"ds_i/dt = -s_i/tau_syn_i : volt",
+    threshold:"v > theta", reset:"v = V_r", refractory:"2*ms", method:"euler",
+    params:{tau_m:"20*ms", tau_syn_e:"5*ms", tau_syn_i:"10*ms",
+            theta:"20*mV", V_r:"10*mV"},
+    initial:{v:"0*mV", s_e:"0*mV", s_i:"0*mV"},
+    position:{x:150 + graph.populations.length*290, y:130}
+  });
+  graph.monitors.push({id:id+"_spike", target:id, kind:"spike", variables:[], record:true});
+  graph.monitors.push({id:id+"_rate",  target:id, kind:"rate",  variables:[], record:true});
+  select("population", id); touched();
+}
+
+function addStimulus(){
+  if (!graph.populations.length) return flash("Add a population first.");
+  const id = uid("in");
+  const target = (selection && selection.kind === "population")
+    ? selection.id : graph.populations[0].id;
+  const t = popById(target);
+  graph.stimuli.push({
+    id, target, kind:"poisson", label:id, target_var:"v",
+    params:{n_inputs:100, rate:"100*Hz", weight:"0.1*mV"},
+    position:{x:t.position.x-225, y:t.position.y+8}
+  });
+  select("stimulus", id); touched();
+}
+
+function addSynapse(source, target){
+  const id = uid("syn");
+  const inh = isInhibitory(popById(source));
+  graph.synapses.push({
+    id, source, target, label:`${source}→${target}`,
+    probability:0.1, condition:null, n_per_pair:1, model:"",
+    on_pre: inh ? "s_i_post -= g*J" : "s_e_post += J",
+    on_post:null, delay:"1.5*ms",
+    params: inh ? {} : {J:"0.1*mV"}, initial:{}
+  });
+  select("synapse", id); touched();
+}
+
+function retargetStimulus(stimId, popId){
+  const s = findItem("stimulus", stimId);
+  if (!s) return;
+  s.target = popId;
+  select("stimulus", stimId); touched();
+}
+
+function deleteSelected(){
+  if (!selection) return;
+  const {kind,id} = selection;
+  if (kind === "population"){
+    graph.populations = graph.populations.filter(p => p.id !== id);
+    graph.synapses = graph.synapses.filter(s => s.source !== id && s.target !== id);
+    graph.stimuli = graph.stimuli.filter(s => s.target !== id);
+    graph.monitors = graph.monitors.filter(m => m.target !== id);
+    panels.forEach(p => { if (p.target === id) p.target = graph.populations[0]?.id || null; });
+  } else if (kind === "synapse"){
+    graph.synapses = graph.synapses.filter(s => s.id !== id);
+  } else {
+    graph.stimuli = graph.stimuli.filter(s => s.id !== id);
+  }
+  select(null); renderPanels(); touched();
+}
+
+function touched({revalidate=true} = {}){
+  renderCanvas();
+  if (revalidate) scheduleValidate();
+  if (autoRun) scheduleAutoRun();
+}
+
+// =====================================================================
+// Inspector
+// =====================================================================
+
+const NUM_UNIT = /^\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*(?:\*\s*([A-Za-z_][A-Za-z0-9_]*))?\s*$/;
+
+function fld(label, val, act, opts){
+  opts = opts || {};
+  return `<div class="row"><label>${esc(label)}${opts.hint?` <span class="note">${esc(opts.hint)}</span>`:""}</label>
+    <input type="${opts.type||"text"}" value="${esc(val ?? "")}" data-act="${act}"></div>`;
+}
+function area(label, val, act, rows){
+  return `<div class="row"><label>${esc(label)}</label>
+    <textarea rows="${rows||3}" data-act="${act}">${esc(val ?? "")}</textarea></div>`;
+}
+function selectField(label, val, act, opts){
+  return `<div class="row"><label>${esc(label)}</label><select data-act="${act}">
+    ${opts.map(o => `<option value="${esc(o)}" ${val===o?"selected":""}>${esc(o)}</option>`).join("")}
+  </select></div>`;
+}
+function sec(title, body, open){
+  open = open !== false;
+  return `<div class="sec"><h3 data-toggle>${open?"▾":"▸"} ${esc(title)}</h3>
+    <div class="body" style="${open?"":"display:none"}">${body}</div></div>`;
+}
+function kvEditor(obj, act){
+  return Object.entries(obj||{}).map(([k,v]) => `<div class="kv">
+    <input value="${esc(k)}" data-act="${act}:key" data-key="${esc(k)}">
+    <input value="${esc(v)}" data-act="${act}:val" data-key="${esc(k)}">
+    <button data-act="${act}:del" data-key="${esc(k)}">×</button></div>`).join("")
+    + `<button data-act="${act}:add">+ constant</button>`;
+}
+
+/**
+ * A slider whose range can be pushed outwards.
+ *
+ * A fixed multiple of the starting value is always wrong for someone: the
+ * useful range for `g` might be 0-20 while `tau_m` wants 1-200 ms. So the range
+ * starts generous (ten times the current value) and the number box beside it
+ * accepts anything at all; typing a larger value widens the slider instead of
+ * clipping the input.
+ */
+function slider(key, raw, act){
+  const m = NUM_UNIT.exec(String(raw));
+  if (!m) return "";
+  const val = parseFloat(m[1]), unit = m[2] || "";
+  const id = act + ":" + key;
+  const auto = val === 0 ? 10 : Math.abs(val)*10;
+  const hi = Math.max(sliderMax[id] || 0, auto);
+  sliderMax[id] = hi;
+  const lo = val < 0 ? -hi : 0;
+  return `<div class="sl" data-slid="${esc(id)}">
+    <div class="top"><span class="nm">${esc(key)}</span>
+      <span class="unit">${unit ? esc(unit) : "dimensionless"}</span></div>
+    <div class="ctl">
+      <input type="range" min="${lo}" max="${hi}" step="${(hi-lo)/500}" value="${val}"
+             data-act="${act}:slide" data-key="${esc(key)}" data-unit="${esc(unit)}"
+             data-slidkey="${esc(id)}">
+      <input type="number" value="${val}" step="any"
+             data-act="${act}:num" data-key="${esc(key)}" data-unit="${esc(unit)}"
+             data-slidkey="${esc(id)}">
+    </div></div>`;
+}
+const sliders = (obj, act) =>
+  Object.entries(obj||{}).map(([k,v]) => slider(k,v,act)).join("");
+
+function monitorChecks(popId){
+  const has = k => graph.monitors.some(m => m.target === popId && m.kind === k);
+  const box = (k,l,note) => `<div class="chk">
+    <input type="checkbox" data-act="mon:${k}" data-pop="${esc(popId)}" ${has(k)?"checked":""}>
+    <label style="margin:0">${esc(l)}</label></div>
+    <div class="note" style="margin:-4px 0 8px 24px">${esc(note)}</div>`;
+  return box("spike","Spike times","Raster, neuron grid, ISI, playback")
+       + box("rate","Population rate","Required for spectrum, entropy, resonance")
+       + box("state","Membrane trace","Neurons 0-2, sampled at 1 ms");
+}
+
+function roleSummary(pop){
+  const inc = graph.synapses.filter(s => s.target === pop.id);
+  const out = graph.synapses.filter(s => s.source === pop.id);
+  const stim = graph.stimuli.filter(s => s.target === pop.id);
+  const line = (s,dir) => `<div><span class="tag ${synIsInhibitory(s)?'i':'e'}">${
+    synIsInhibitory(s)?"inh":"exc"}</span>${esc(dir)} <b>${esc(
+    dir==="from"?s.source:s.target)}</b> <span class="note">${esc(s.on_pre||"")}</span></div>`;
+  return `<div class="role">
+    ${stim.map(s => `<div><span class="tag s">input</span>from <b>${esc(s.id)}</b>
+       <span class="note">${esc(s.kind)}</span></div>`).join("")}
+    ${inc.map(s => line(s,"from")).join("")}
+    ${out.map(s => line(s,"to")).join("")}
+    ${(!inc.length && !out.length && !stim.length) ? `<div class="note">nothing connected yet</div>` : ""}
+  </div>
+  <div class="note" style="margin-top:8px">
+    This population is <b>${esc(popRole(pop).role)}</b>, decided by its outgoing
+    synapses. The variables it declares (<span class="mono">s_e</span>,
+    <span class="mono">s_i</span>) are its two <i>input</i> channels. Every cell
+    needs both, because inhibitory cells still receive excitation.
+  </div>`;
+}
+
+function renderInspector(){
+  const el = $("inspector");
+  let h = "";
+
+  if (!selection){
+    h += sec("Simulation", `
+      ${fld("Name", graph.name, "graph:name")}
+      <div class="grid2">
+        ${fld("Duration", graph.run.duration, "run:duration")}
+        ${fld("Timestep", graph.run.dt, "run:dt")}
+        ${fld("Transient", graph.run.transient, "run:transient", {hint:"discarded"})}
+        ${fld("Seed", graph.run.seed ?? "", "run:seed")}
+      </div>
+      ${selectField("Code generation", graph.run.codegen_target, "run:codegen_target",
+            ["numpy","cython","auto"])}
+      <div class="chk"><input type="checkbox" id="autoRunChk" ${autoRun?"checked":""}>
+        <label for="autoRunChk" style="margin:0">Re-run when a slider moves</label></div>
+      <div class="note">Each run takes about a second here. Turn this off while
+        editing equations.</div>`);
+    h += sec("Global constants", sliders(graph.globals,"globals")
+             + kvEditor(graph.globals,"globals"));
+  }
+
+  else if (selection.kind === "population"){
+    const p = findItem("population", selection.id);
+    if (!p){ selection = null; return renderInspector(); }
+    h += sec(`Population · ${p.id}`, `
+      <div class="grid2">${fld("Label",p.label,"pop:label")}${fld("Size N",p.n,"pop:n",{type:"number"})}</div>
+      ${area("Equations", p.equations, "pop:equations", 5)}
+      ${fld("Threshold", p.threshold, "pop:threshold")}
+      ${area("Reset", p.reset, "pop:reset", 2)}
+      <div class="grid2">${fld("Refractory",p.refractory,"pop:refractory")}
+        ${selectField("Method",p.method,"pop:method",["euler","exact","heun","milstein","rk2","rk4"])}</div>`);
+    h += sec("Wiring and role", roleSummary(p));
+    h += sec("Constants", sliders(p.params,"pop:params") + kvEditor(p.params,"pop:params"));
+    h += sec("Initial values", kvEditor(p.initial,"pop:initial"), false);
+    h += sec("Recording", monitorChecks(p.id));
+  }
+
+  else if (selection.kind === "synapse"){
+    const s = findItem("synapse", selection.id);
+    if (!s){ selection = null; return renderInspector(); }
+    const ids = graph.populations.map(p => p.id);
+    h += sec(`Synapse · ${s.id}`, `
+      ${fld("Label",s.label,"syn:label")}
+      <div class="grid2">${selectField("Source",s.source,"syn:source",ids)}
+        ${selectField("Target",s.target,"syn:target",ids)}</div>
+      <div class="grid2">${fld("Probability",s.probability ?? "","syn:probability",{hint:"0-1"})}
+        ${fld("Condition",s.condition ?? "","syn:condition",{hint:"e.g. i != j"})}</div>
+      ${fld("on_pre", s.on_pre ?? "", "syn:on_pre", {hint:"+= excites, -= inhibits"})}
+      ${fld("on_post", s.on_post ?? "", "syn:on_post", {hint:"for STDP"})}
+      <div class="grid2">${fld("Delay",s.delay ?? "","syn:delay")}
+        ${fld("Model",s.model ?? "","syn:model",{hint:"e.g. w : volt"})}</div>
+      <div class="note">This edge is <b>${synIsInhibitory(s)?"inhibitory":"excitatory"}</b>,
+        inferred from the sign in on_pre.</div>`);
+    h += sec("Constants", sliders(s.params,"syn:params") + kvEditor(s.params,"syn:params"));
+    h += sec("Per-synapse values", kvEditor(s.initial,"syn:initial"), false);
+  }
+
+  else {
+    const s = findItem("stimulus", selection.id);
+    if (!s){ selection = null; return renderInspector(); }
+    const kinds = ["poisson","poisson_group","dc","step","sinusoid","chirp","ou_noise","spike_train"];
+    const continuous = ["dc","step","sinusoid","chirp","ou_noise"].includes(s.kind);
+    h += sec(`Input · ${s.id}`, `
+      ${fld("Label",s.label,"stim:label")}
+      <div class="grid2">${selectField("Kind",s.kind,"stim:kind",kinds)}
+        ${selectField("Target",s.target,"stim:target",graph.populations.map(p=>p.id))}</div>
+      ${fld("Target variable", s.target_var, "stim:target_var")}
+      <div class="note">${esc(kindHelp(s.kind))}</div>
+      ${continuous ? `<div class="note" style="margin-top:6px;color:#f5b942">
+          Continuous inputs add a variable (default <span class="mono">I_ext</span>)
+          to the target's equations. You must reference it there, e.g.
+          <span class="mono">dv/dt = (-v + I_ext)/tau_m : volt</span>.</div>` : ""}`);
+    h += sec("Parameters", sliders(s.params,"stim:params") + kvEditor(s.params,"stim:params"));
+  }
+
+  el.innerHTML = h;
+  el.querySelectorAll("[data-toggle]").forEach(x => x.onclick = () => {
+    const b = x.nextElementSibling, open = b.style.display !== "none";
+    b.style.display = open ? "none" : "";
+    x.textContent = (open?"▸":"▾") + x.textContent.slice(1);
+  });
+  const c = $("autoRunChk");
+  if (c) c.onchange = () => { autoRun = c.checked; };
+}
+
+function kindHelp(k){
+  return ({
+    poisson:"PoissonInput: n_inputs, rate, weight. Added straight to the target variable.",
+    poisson_group:"PoissonGroup through a real Synapses object: n_inputs, rate, weight, probability.",
+    dc:"Constant injection: amplitude.",
+    step:"Square pulse: amplitude, t_start, t_stop.",
+    sinusoid:"Sine drive: amplitude, frequency, offset.",
+    chirp:"Frequency sweep: amplitude, f_start, f_stop, duration. One run maps the whole tuning curve.",
+    ou_noise:"Ornstein-Uhlenbeck noise: sigma, tau, mean.",
+    spike_train:"Exact spikes: indices, times_ms, weight."
+  })[k] || "";
+}
+
+$("inspector").addEventListener("input", (e) => {
+  const el = e.target, act = el.dataset.act;
+  if (!act) return;
+  const parts = act.split(":");
+  const scope = parts[0], prop = parts[1], op = parts[2];
+  const key = el.dataset.key;
+  const item = selection ? findItem(selection.kind, selection.id) : null;
+  const bagOf = () => scope === "globals" ? graph.globals : (item ? item[prop] : null);
+  const tail = op || prop;
+
+  if (tail === "slide" || tail === "num"){
+    const bag = bagOf(); if (!bag) return;
+    const unit = el.dataset.unit;
+    const v = parseFloat(el.value);
+    if (!Number.isFinite(v)) return;
+    bag[key] = unit ? `${+v.toPrecision(6)}*${unit}` : String(+v.toPrecision(6));
+    const ctl = el.closest(".ctl");
+    const range = ctl.querySelector('input[type=range]');
+    const num = ctl.querySelector('input[type=number]');
+    if (tail === "num"){
+      if (Math.abs(v) > parseFloat(range.max)){
+        const hi = Math.abs(v)*1.25;
+        sliderMax[el.dataset.slidkey] = hi;
+        range.max = hi; range.step = (hi - parseFloat(range.min))/500;
+      }
+      range.value = v;
+    } else { num.value = +v.toPrecision(6); }
+    return touched();
+  }
+
+  if (["key","val","del","add"].includes(tail)){
+    const bag = bagOf(); if (!bag) return;
+    if (tail === "key"){ const v = bag[key]; delete bag[key]; bag[el.value] = v; el.dataset.key = el.value; }
+    else if (tail === "val"){ bag[key] = el.value; }
+    return touched();
+  }
+
+  const target = scope === "graph" ? graph : scope === "run" ? graph.run : item;
+  if (!target) return;
+  let v = el.value;
+  if (prop === "n" || prop === "seed") v = v === "" ? null : parseInt(v,10);
+  if (prop === "probability") v = v === "" ? null : parseFloat(v);
+  if (["condition","on_post","model","delay","threshold","refractory","reset","on_pre"]
+      .includes(prop) && v === "") v = null;
+  target[prop] = v;
+
+  if (scope === "syn" && ["source","target","on_pre"].includes(prop)) renderCanvas();
+  touched();
+});
+
+$("inspector").addEventListener("change", (e) => {
+  const el = e.target, act = el.dataset.act || "";
+  if (act.startsWith("mon:")){
+    const kind = act.split(":")[1], pop = el.dataset.pop;
+    if (el.checked){
+      graph.monitors.push({id:`${pop}_${kind}`, target:pop, kind,
+        variables: kind==="state"?["v"]:[], record: kind==="state"?[0,1,2]:true,
+        dt: kind==="state"?"1*ms":null});
+    } else {
+      graph.monitors = graph.monitors.filter(m => !(m.target===pop && m.kind===kind));
+    }
+    return touched();
+  }
+  if (act === "stim:kind") renderInspector();
+});
+
+$("inspector").addEventListener("click", (e) => {
+  const el = e.target, act = el.dataset.act;
+  if (!act || el.tagName !== "BUTTON") return;
+  const parts = act.split(":");
+  const scope = parts[0], prop = parts[1], op = parts[2];
+  const item = selection ? findItem(selection.kind, selection.id) : null;
+  const bag = scope === "globals" ? graph.globals : (item ? item[prop] : null);
+  if (!bag) return;
+  const tail = op || prop;
+  if (tail === "del") delete bag[el.dataset.key];
+  if (tail === "add"){ let i=1; while (bag["new"+i] !== undefined) i++; bag["new"+i] = "1*mV"; }
+  touched(); renderInspector();
+});
+
+// =====================================================================
+// Backend
+// =====================================================================
+
+async function post(path, body){
+  const r = await fetch(path, {method:"POST", headers:{"Content-Type":"application/json"},
+                              body:JSON.stringify(body)});
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.detail || `${r.status} ${r.statusText}`);
+  return d;
+}
+
+function scheduleValidate(){ clearTimeout(validateTimer); validateTimer = setTimeout(doValidate, 350); }
+function scheduleAutoRun(){ clearTimeout(autoRunTimer);
+  autoRunTimer = setTimeout(() => { if (!running) doRun(); }, 600); }
+
+async function doValidate(){
+  try{
+    const out = await post("/api/validate", {graph});
+    diagnostics = out.diagnostics || [];
+    showDiagnostics(out.ok); renderCanvas();
+  }catch(err){ flash("Validation failed: " + err.message); }
+}
+
+async function doRun(){
+  if (running) return;
+  running = true; stopPlay();
+  $("btnRun").disabled = true; $("btnRun").textContent = "Running…";
+  try{
+    const out = await post("/api/simulate", {graph});
+    diagnostics = out.diagnostics || [];
+    if (!out.ok){ showDiagnostics(false); renderCanvas(); return; }
+    lastResult = out;
+    buildAnim(out);
+    renderPanels();
+    showDiagnostics(true,
+      `Simulated ${out.duration.toFixed(2)} s of model time in ${out.wall_time.toFixed(2)} s. Press play to watch it.`);
+    renderCanvas();
+  }catch(err){ flash("Run failed: " + err.message); }
+  finally{ running = false; $("btnRun").disabled = false; $("btnRun").textContent = "Run"; }
+}
+
+function showDiagnostics(ok, note){
+  const items = diagnostics.map(d => `<div class="diag ${esc(d.severity)}">
+    <span class="sev">${esc(d.severity)}</span>
+    ${d.node_id ? `<span class="where">${esc(d.node_id)}${d.field?"."+esc(d.field):""}</span>`:""}
+    <span>${esc(d.message)}</span></div>`).join("");
+  const head = note ? `<div style="color:#4ecb8d">${esc(note)}</div>`
+             : ok ? `<div style="color:#4ecb8d">Graph is valid.</div>` : "";
+  $("status").innerHTML = (head+items) || `<div class="note">Ready.</div>`;
+  const n = diagnostics.filter(d => d.severity === "error").length;
+  const tag = $("tag");
+  tag.style.display = n ? "" : "none";
+  tag.textContent = n ? `${n} error${n>1?"s":""}` : "";
+  tag.style.color = "#ff5f5f"; tag.style.borderColor = "#ff5f5f";
+}
+function flash(m){
+  $("status").innerHTML = `<div class="diag error"><span class="sev">error</span><span>${esc(m)}</span></div>`;
+}
+
+// =====================================================================
+// Plot primitives
+// =====================================================================
+
+/**
+ * Axis tick labels that survive small numbers.
+ *
+ * Normalised spectral amplitudes sit near 1e-3. A fixed two-decimal format
+ * prints every tick as "0.00", which is how an axis ends up looking broken
+ * while the data underneath is fine. Instead pick a common power of ten,
+ * divide the labels by it, and state the factor once on the axis label. That is
+ * the convention used in papers and it keeps the numbers short.
+ */
+function scaleFor(min, max){
+  const m = Math.max(Math.abs(min), Math.abs(max));
+  if (!Number.isFinite(m) || m === 0) return {k:1, suffix:""};
+  const e = Math.floor(Math.log10(m));
+  if (e >= -2 && e <= 4) return {k:1, suffix:""};
+  return {k:Math.pow(10,e), suffix:` ×10${sup(e)}`};
+}
+function sup(n){
+  const map = {"-":"⁻","0":"⁰","1":"¹","2":"²","3":"³","4":"⁴",
+               "5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹"};
+  return String(n).split("").map(c => map[c] || c).join("");
+}
+function fmtTick(v, span){
+  if (!Number.isFinite(v)) return "";
+  if (Math.abs(v) < 1e-12) return "0";
+  const d = span >= 100 ? 0 : span >= 10 ? 1 : span >= 1 ? 2 : 3;
+  return v.toFixed(d);
+}
+
+function frame(svg, xlabel, ylabel){
+  const r = svg.getBoundingClientRect();
+  const w = Math.max(180, r.width), h = Math.max(90, r.height);
+  const pad = {l:54, r:14, t:12, b:30};
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  svg.innerHTML = "";
+  const iw = w-pad.l-pad.r, ih = h-pad.t-pad.b;
+  return {w,h,pad,iw,ih,
+    axes(xmin,xmax,ymin,ymax,opts){
+      opts = opts || {};
+      const yticks = opts.yticks || 4, xticks = opts.xticks || 5;
+      const X = v => pad.l + (v-xmin)/((xmax-xmin)||1)*iw;
+      const Y = v => pad.t + ih - (v-ymin)/((ymax-ymin)||1)*ih;
+      const ys = scaleFor(ymin,ymax), xs = scaleFor(xmin,xmax);
+      const yspan = Math.abs(ymax-ymin)/ys.k, xspan = Math.abs(xmax-xmin)/xs.k;
+      const tk = (a,b,n) => Array.from({length:n+1},(_,i)=>a+(b-a)*i/n);
+      let g = `<g stroke="#1b2029" stroke-width="1">`;
+      for (const t of tk(ymin,ymax,yticks))
+        g += `<line x1="${pad.l}" y1="${Y(t).toFixed(1)}" x2="${w-pad.r}" y2="${Y(t).toFixed(1)}"/>`;
+      g += `</g><g fill="#6b7488" font-size="9.5" font-family="ui-monospace,monospace">`;
+      for (const t of tk(ymin,ymax,yticks))
+        g += `<text x="${pad.l-6}" y="${(Y(t)+3.2).toFixed(1)}" text-anchor="end">${esc(fmtTick(t/ys.k,yspan))}</text>`;
+      for (const t of tk(xmin,xmax,xticks))
+        g += `<text x="${X(t).toFixed(1)}" y="${h-pad.b+14}" text-anchor="middle">${esc(fmtTick(t/xs.k,xspan))}</text>`;
+      g += `</g><g fill="#98a1b3" font-size="9.5">`;
+      if (xlabel) g += `<text x="${pad.l+iw/2}" y="${h-4}" text-anchor="middle">${esc(xlabel+xs.suffix)}</text>`;
+      if (ylabel) g += `<text transform="translate(12,${pad.t+ih/2}) rotate(-90)" text-anchor="middle">${esc(ylabel+ys.suffix)}</text>`;
+      g += `</g>`;
+      svg.insertAdjacentHTML("beforeend", g);
+      return {X,Y};
+    }};
+}
+function svgAdd(svg, markup){ svg.insertAdjacentHTML("beforeend", markup); }
+function newSvg(bd){
+  const s = document.createElementNS("http://www.w3.org/2000/svg","svg");
+  bd.appendChild(s); return s;
+}
+function emptyMsg(bd, msg){
+  bd.insertAdjacentHTML("beforeend", `<div class="empty">${esc(msg)}</div>`);
+}
+
+// =====================================================================
+// Playback
+// =====================================================================
+
+/**
+ * Precompute everything the animation needs.
+ *
+ * Spikes arrive as flat (t, i) arrays. Recomputing "who is firing right now"
+ * by scanning them on every frame would be O(spikes) at 60 Hz. Instead bin once
+ * into fixed-width frames: population counts for the node halo, and a per-frame
+ * index list for the neuron grid. After this a frame costs an array lookup.
+ */
+function buildAnim(out){
+  const dt = 0.002;
+  const T = out.duration || 1;
+  const nb = Math.max(1, Math.ceil(T/dt));
+  const per = {};
+
+  for (const r of Object.values(out.rasters || {})){
+    const pop = popById(r.target);
+    const N = pop ? pop.n : (r.i.length ? Math.max.apply(null, r.i)+1 : 1);
+    const counts = new Float32Array(nb);
+    const bins = Array.from({length:nb}, () => []);
+    for (let k = 0; k < r.t.length; k++){
+      const b = clamp(Math.floor(r.t[k]/dt), 0, nb-1);
+      counts[b]++; bins[b].push(r.i[k]);
+    }
+    let peak = 0;
+    for (let b = 0; b < nb; b++){ const hz = counts[b]/(N*dt); if (hz > peak) peak = hz; }
+    per[r.target] = {N, counts, bins, peak: peak || 1, subsampled: !!r.subsampled};
+  }
+  anim = {dt, T, nb, per};
+  play.t = 0;
+  $("scrub").max = T; $("scrub").step = dt; $("scrub").value = 0;
+  updateClock();
+}
+
+/** Instantaneous rate of a population at the playhead, normalised to 0..1. */
+function liveRate(popId){
+  if (!anim || !anim.per[popId]) return 0;
+  if (!play.on && play.t === 0) return 0;
+  const p = anim.per[popId];
+  const b = clamp(Math.floor(play.t/anim.dt), 0, anim.nb-1);
+  return clamp((p.counts[b]/(p.N*anim.dt))/p.peak, 0, 1);
+}
+
+function updateClock(){
+  const T = anim ? anim.T : 0;
+  $("clock").innerHTML = `<b>${(play.t*1000).toFixed(0)} ms</b> / ${(T*1000).toFixed(0)} ms`;
+  const modelMs = play.speed*1000;
+  $("tmap").textContent = `1 s real = ${modelMs < 1 ? modelMs.toFixed(2) : modelMs.toFixed(0)} ms model`;
+}
+
+function tickPlay(now){
+  if (!play.on || !anim){ play.raf = null; return; }
+  const dtReal = Math.min(0.1, (now - play.last)/1000);
+  play.last = now;
+  play.t += dtReal*play.speed;
+  if (play.t >= anim.T){
+    if (play.loop) play.t = 0;
+    else { play.t = anim.T; stopPlay(); }
+  }
+  $("scrub").value = play.t;
+  updateClock(); drawPlayheads(); renderCanvas();
+  if (play.on) play.raf = requestAnimationFrame(tickPlay);
+}
+function startPlay(){
+  if (!anim) return flash("Run the network first.");
+  play.on = true; play.last = performance.now();
+  $("btnPlay").textContent = "❚❚";
+  play.raf = requestAnimationFrame(tickPlay);
+}
+function stopPlay(){
+  play.on = false; $("btnPlay").textContent = "▶";
+  if (play.raf) cancelAnimationFrame(play.raf);
+  play.raf = null;
+}
+function seek(t){
+  play.t = clamp(t, 0, anim ? anim.T : 0);
+  $("scrub").value = play.t;
+  updateClock(); drawPlayheads(); renderCanvas();
+}
+
+$("btnPlay").onclick = () => play.on ? stopPlay() : startPlay();
+$("btnLoop").onclick = () => { play.loop = !play.loop; $("btnLoop").classList.toggle("on", play.loop); };
+$("scrub").oninput = (e) => seek(parseFloat(e.target.value));
+$("speed").onchange = (e) => { play.speed = parseFloat(e.target.value); updateClock(); };
+
+/** Move the playhead without redrawing the underlying data. */
+function drawPlayheads(){
+  for (const p of panels){
+    const node = document.querySelector(`[data-panel="${p.id}"]`);
+    if (!node) continue;
+    if (p.type === "neurons"){ drawNeurons(p, node); continue; }
+    if (!p._X) continue;
+    const line = node.querySelector(".playhead");
+    if (line) line.setAttribute("transform", `translate(${(p._X(play.t) - p._X0).toFixed(1)},0)`);
+  }
+}
+
+// =====================================================================
+// Panels
+// =====================================================================
+
+const PANEL_TYPES = [
+  ["raster","Spike raster"], ["neurons","Neuron grid (live)"],
+  ["rate","Population rate"], ["spectrum","Amplitude spectrum"],
+  ["power","Power spectrum"], ["isi","ISI histogram"],
+  ["ratedist","Rate distribution"], ["metrics","Metrics"],
+  ["sweep","Parameter sweep"],
+];
+
+function addPanel(type){
+  const t = graph.populations[0] ? graph.populations[0].id : null;
+  panels.push({id:"p"+Math.random().toString(36).slice(2,8), type:type||"raster",
+               target:t, opts:{}});
+  renderPanels();
+}
+
+function renderPanels(){
+  const wrap = $("panels");
+  wrap.innerHTML = panels.map(p => `
+    <div class="pnl" data-panel="${p.id}">
+      <div class="hd">
+        <select data-panel-type="${p.id}">
+          ${PANEL_TYPES.map(t => `<option value="${t[0]}" ${p.type===t[0]?"selected":""}>${esc(t[1])}</option>`).join("")}
+        </select>
+        <select class="sub" data-panel-target="${p.id}">
+          ${graph.populations.map(x => `<option value="${esc(x.id)}" ${p.target===x.id?"selected":""}>${esc(x.id)}</option>`).join("")}
+        </select>
+        <button class="icon" data-panel-close="${p.id}" title="Remove panel">×</button>
+      </div>
+      <div class="bd"></div>
+    </div>`).join("");
+
+  wrap.querySelectorAll("[data-panel-type]").forEach(s => s.onchange = () => {
+    const p = panels.find(x => x.id === s.dataset.panelType);
+    p.type = s.value; p.opts = {}; p._X = null; renderPanels();
+  });
+  wrap.querySelectorAll("[data-panel-target]").forEach(s => s.onchange = () => {
+    const p = panels.find(x => x.id === s.dataset.panelTarget);
+    p.target = s.value; drawPanel(p);
+  });
+  wrap.querySelectorAll("[data-panel-close]").forEach(b => b.onclick = () => {
+    panels = panels.filter(x => x.id !== b.dataset.panelClose); renderPanels();
+  });
+
+  panels.forEach(drawPanel);
+}
+
+function panelBody(p){
+  const n = document.querySelector(`[data-panel="${p.id}"] .bd`);
+  if (n) n.innerHTML = "";
+  return n;
+}
+const metricsFor = (p) => lastResult && p.target ? (lastResult.metrics||{})[p.target] : null;
+const rasterFor = (p) => lastResult ? Object.values(lastResult.rasters||{}).find(r => r.target === p.target) : null;
+const rateFor = (p) => lastResult ? Object.values(lastResult.rates||{}).find(r => r.target === p.target) : null;
+
+function drawPanel(p){
+  const bd = panelBody(p);
+  if (!bd) return;
+  p._X = null;
+  if (p.type === "sweep") return drawSweep(p, bd);
+  if (!lastResult) return emptyMsg(bd, "Press Run to generate data.");
+  switch (p.type){
+    case "raster":   return drawRaster(p, bd);
+    case "neurons":  return initNeurons(p, bd);
+    case "rate":     return drawRate(p, bd);
+    case "spectrum": return drawSpectrum(p, bd, false);
+    case "power":    return drawSpectrum(p, bd, true);
+    case "isi":      return drawISI(p, bd);
+    case "ratedist": return drawRateDist(p, bd);
+    case "metrics":  return drawMetrics(p, bd);
+  }
+}
+
+function addPlayhead(svg, p, f, a){
+  p._X = a.X; p._X0 = a.X(0);
+  svgAdd(svg, `<g class="playhead" transform="translate(${(a.X(play.t)-a.X(0)).toFixed(1)},0)">
+    <line x1="${a.X(0).toFixed(1)}" y1="${f.pad.t}" x2="${a.X(0).toFixed(1)}"
+          y2="${f.pad.t+f.ih}" stroke="#f5b942" stroke-width="1.4" opacity=".9"/></g>`);
+}
+
+function drawRaster(p, bd){
+  const r = rasterFor(p);
+  if (!r || !r.t.length) return emptyMsg(bd, "No spikes recorded. Enable the spike monitor on this population.");
+  const pop = popById(p.target);
+  const N = pop ? pop.n : Math.max.apply(null, r.i)+1;
+  const svg = newSvg(bd);
+  const f = frame(svg, "time (s)", "neuron");
+  const a = f.axes(0, lastResult.duration, 0, N);
+  const stride = Math.ceil(r.t.length/12000);
+  let pts = "";
+  for (let k = 0; k < r.t.length; k += stride)
+    pts += `<rect x="${a.X(r.t[k]).toFixed(1)}" y="${a.Y(r.i[k]).toFixed(1)}" width="1.3" height="1.3"/>`;
+  svgAdd(svg, `<g fill="#5aa2ff" opacity=".78">${pts}</g>`);
+  addPlayhead(svg, p, f, a);
+  if (r.subsampled)
+    svgAdd(svg, `<text x="${f.w-16}" y="${f.pad.t+10}" text-anchor="end" fill="#f5b942" font-size="9">subsampled</text>`);
+}
+
+function drawRate(p, bd){
+  const r = rateFor(p);
+  if (!r || !r.t.length) return emptyMsg(bd, "Enable the population rate monitor.");
+  const svg = newSvg(bd);
+  const f = frame(svg, "time (s)", "rate (Hz)");
+  const ymax = Math.max.apply(null, r.rate)*1.08 || 1;
+  const a = f.axes(0, lastResult.duration, 0, ymax);
+  const stride = Math.ceil(r.t.length/2000);
+  let d = "";
+  for (let k = 0; k < r.t.length; k += stride)
+    d += `${d?"L":"M"}${a.X(r.t[k]).toFixed(1)},${a.Y(r.rate[k]).toFixed(1)}`;
+  svgAdd(svg, `<path d="${d}" fill="none" stroke="#4ecb8d" stroke-width="1.2"/>`);
+  addPlayhead(svg, p, f, a);
+}
+
+function drawSpectrum(p, bd, power){
+  const m = metricsFor(p);
+  if (!m || !m.spectrum) return emptyMsg(bd, "Enable the population rate monitor.");
+  const hiHz = p.opts.hi || 120;
+  const F = m.spectrum.frequencies, A = m.spectrum.amplitudes;
+  const xs = [], ys = [];
+  for (let k = 1; k < F.length && F[k] <= hiHz; k++){
+    xs.push(F[k]); ys.push(power ? A[k]*A[k] : A[k]);
+  }
+  if (!xs.length) return emptyMsg(bd, "Spectrum is empty.");
+  const svg = newSvg(bd);
+  const f = frame(svg, "frequency (Hz)", power ? "power (norm.)" : "amplitude (norm.)");
+  const a = f.axes(xs[0], xs[xs.length-1], 0, Math.max.apply(null, ys)*1.1 || 1);
+  let d = "";
+  for (let k = 0; k < xs.length; k++) d += `${k?"L":"M"}${a.X(xs[k]).toFixed(1)},${a.Y(ys[k]).toFixed(1)}`;
+  svgAdd(svg, `<path d="${d}" fill="none" stroke="#7c8cff" stroke-width="1.3"/>`);
+  const pf = m.resonance.peak_frequency;
+  if (pf == null || !Number.isFinite(pf)) return;
+  const px = a.X(pf);
+  svgAdd(svg, `<line x1="${px.toFixed(1)}" y1="${f.pad.t}" x2="${px.toFixed(1)}" y2="${f.pad.t+f.ih}"
+      stroke="#f5b942" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="${(px+5).toFixed(1)}" y="${f.pad.t+11}" fill="#f5b942" font-size="10">${pf.toFixed(1)} Hz</text>
+    <text x="${f.w-16}" y="${f.pad.t+11}" text-anchor="end" fill="#6b7488" font-size="9">
+      normalised · H=${num(m.spectrum.entropy, 3)}</text>`);
+}
+
+function drawISI(p, bd){
+  const m = metricsFor(p);
+  if (!m || !m.isi) return emptyMsg(bd, "Enable the spike monitor.");
+  drawHistogram(bd, m.isi.edges.map(v => v*1000), m.isi.counts,
+                "inter-spike interval (ms)", "count", "#5aa2ff");
+}
+function drawRateDist(p, bd){
+  const m = metricsFor(p);
+  if (!m || !m.rate_distribution) return emptyMsg(bd, "Enable the spike monitor.");
+  drawHistogram(bd, m.rate_distribution.edges, m.rate_distribution.counts,
+                "per-neuron rate (Hz)", "neurons", "#4ecb8d");
+}
+function drawHistogram(bd, edges, counts, xlabel, ylabel, colour){
+  if (!counts.some(c => c > 0)) return emptyMsg(bd, "Not enough spikes for a histogram.");
+  const svg = newSvg(bd);
+  const f = frame(svg, xlabel, ylabel);
+  const a = f.axes(edges[0], edges[edges.length-1], 0, Math.max.apply(null, counts)*1.08);
+  let bars = "";
+  for (let k = 0; k < counts.length; k++){
+    const x0 = a.X(edges[k]), x1 = a.X(edges[k+1]), y = a.Y(counts[k]);
+    bars += `<rect x="${x0.toFixed(1)}" y="${y.toFixed(1)}"
+      width="${Math.max(0.6,(x1-x0-0.7)).toFixed(1)}" height="${(a.Y(0)-y).toFixed(1)}"/>`;
+  }
+  svgAdd(svg, `<g fill="${colour}" opacity=".72">${bars}</g>`);
+}
+
+/** NaN reaches the browser as null, which has no .toFixed. Show it plainly. */
+function num(v, digits, suffix){
+  if (v == null || !Number.isFinite(v)) return "undefined";
+  return v.toFixed(digits) + (suffix || "");
+}
+
+function drawMetrics(p, bd){
+  const m = metricsFor(p);
+  if (!m || !m.spikes) return emptyMsg(bd, "Enable the rate and spike monitors.");
+  const regime = m.regime || "unknown";
+  const col = regime.indexOf("AI") >= 0 ? "#4ecb8d"
+            : regime.indexOf("insufficient") >= 0 ? "#f5b942" : "#5aa2ff";
+  const row = (k,v) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`;
+  bd.innerHTML = `<div class="scroll">
+    <span class="badge" style="background:${col};color:#07101a">${esc(regime)}</span>
+    <table class="mt">
+      ${row("mean rate", num(m.spikes.mean_rate, 2, " Hz"))}
+      ${row("spikes", (m.spikes.n_spikes||0).toLocaleString())}
+      ${row("CV of ISI", num(m.spikes.cv_isi, 3))}
+      ${row("Fano factor", num(m.spikes.fano_factor, 3))}
+      ${row("active fraction", num(m.spikes.active_fraction, 3))}
+      ${row("synchrony", num(m.synchrony, 3))}
+      ${row("spectral entropy", num(m.spectrum.entropy, 4))}
+      ${row("resonant frequency", num(m.resonance.peak_frequency, 2, " Hz"))}
+      ${row("peak amplitude", m.resonance.peak_amplitude != null
+            ? m.resonance.peak_amplitude.toExponential(2) : "undefined")}
+      ${row("FWHM (amplitude)", num(m.resonance.bandwidth_fwhm, 2, " Hz"))}
+      ${row("-3 dB bandwidth", num(m.resonance.bandwidth_half_power, 2, " Hz"))}
+      ${row("Q factor", num(m.resonance.q_factor, 2))}
+      ${m.resonance.truncated ? row("note", "peak wider than the 1-100 Hz window") : ""}
+    </table></div>`;
+}
+
+// ---- live neuron grid ----
+
+function initNeurons(p, bd){
+  if (!rasterFor(p)) return emptyMsg(bd, "Enable the spike monitor on this population.");
+  const c = document.createElement("canvas");
+  bd.appendChild(c);
+  p._canvas = c;
+  requestAnimationFrame(() => drawNeurons(p, document.querySelector(`[data-panel="${p.id}"]`)));
+}
+
+/**
+ * One cell per neuron; brightness decays after it fires.
+ *
+ * The decay constant is in *model* time, not real time, so the display looks
+ * the same at every playback speed. If it were in real time, slowing down to
+ * inspect a volley would make every cell appear to stay lit far longer.
+ */
+function drawNeurons(p, node){
+  if (!node || !anim || !anim.per[p.target]) return;
+  const c = p._canvas || node.querySelector("canvas");
+  if (!c) return;
+  const A = anim.per[p.target];
+  const rect = c.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const W = Math.max(60, rect.width), H = Math.max(50, rect.height);
+  if (c.width !== Math.floor(W*dpr) || c.height !== Math.floor(H*dpr)){
+    c.width = Math.floor(W*dpr); c.height = Math.floor(H*dpr);
+  }
+  const g = c.getContext("2d");
+  g.setTransform(dpr,0,0,dpr,0,0);
+
+  const N = A.N;
+  const cols = Math.max(1, Math.round(Math.sqrt(N*W/H)));
+  const rows = Math.ceil(N/cols);
+  const cw = W/cols, ch = H/rows;
+  const size = Math.max(1, Math.min(cw,ch)-1);
+
+  const TAU = 0.025;
+  const b1 = clamp(Math.floor(play.t/anim.dt), 0, anim.nb-1);
+  const b0 = clamp(b1 - Math.ceil(TAU*3/anim.dt), 0, anim.nb-1);
+
+  const level = new Float32Array(N);
+  for (let b = b0; b <= b1; b++){
+    const v = Math.exp(-((b1-b)*anim.dt)/TAU);
+    const list = A.bins[b];
+    for (let k = 0; k < list.length; k++){
+      const idx = list[k];
+      if (idx < N && v > level[idx]) level[idx] = v;
+    }
+  }
+
+  g.fillStyle = "#12151c"; g.fillRect(0,0,W,H);
+  for (let n = 0; n < N; n++){
+    const x = (n % cols)*cw, y = Math.floor(n/cols)*ch;
+    const v = level[n];
+    if (v < 0.02) g.fillStyle = "#1b2029";
+    else g.fillStyle = `rgba(${(90+120*v)|0},${(162+60*v)|0},255,${(0.25+0.75*v).toFixed(3)})`;
+    g.fillRect(x+0.5, y+0.5, size, size);
+  }
+  g.fillStyle = "rgba(152,161,179,.9)";
+  g.font = "10px ui-monospace,monospace";
+  g.fillText(`${N} neurons · ${(play.t*1000).toFixed(0)} ms`, 6, H-6);
+}
+
+// ---- parameter sweep panel ----
+
+function drawSweep(p, bd){
+  const o = p.opts;
+  const keys = sweepableKeys();
+  if (!keys.length) return emptyMsg(bd, "No numeric constants to sweep yet.");
+  if (!o.key){
+    const first = keys[0];
+    o.scope = first.scope; o.node_id = first.node_id; o.key = first.key; o.unit = first.unit;
+  }
+  if (o.from == null) o.from = 1;
+  if (o.to == null) o.to = 8;
+  if (o.steps == null) o.steps = 6;
+  o.metric = o.metric || "peak_frequency";
+  if (o.at == null) o.at = "resonant";
+  const currentId = `${o.scope}|${o.node_id||""}|${o.key}`;
+  const needsFreq = o.metric === "amplitude_at" || o.metric === "power_at";
+
+  bd.innerHTML = `<div class="scroll">
+    <div class="row"><label>Parameter to vary</label>
+      <select data-sw="key">${keys.map(k =>
+        `<option value="${esc(k.id)}" ${currentId===k.id?"selected":""}>${esc(k.label)}</option>`).join("")}</select></div>
+    <div class="row"><label>Quantity to measure</label>
+      <select data-sw="metric">${metricCatalog.map(m =>
+        `<option value="${esc(m.id)}" ${o.metric===m.id?"selected":""}>${esc(m.label)}</option>`).join("")}</select></div>
+    <div class="grid3">
+      <div class="row"><label>From</label><input type="number" step="any" value="${o.from}" data-sw="from"></div>
+      <div class="row"><label>To</label><input type="number" step="any" value="${o.to}" data-sw="to"></div>
+      <div class="row"><label>Points</label><input type="number" min="2" max="40" value="${o.steps}" data-sw="steps"></div>
+    </div>
+    ${needsFreq ? `<div class="row"><label>At frequency in Hz, or the word "resonant"</label>
+      <input value="${esc(o.at)}" data-sw="at"></div>` : ""}
+    <button data-sw="go" class="primary" style="width:100%">Run sweep · ${o.steps} simulations</button>
+    <div class="note" style="margin-top:6px">Each point is a full simulation run from
+      the current graph, so this ignores anything the sliders changed since the last Run.</div>
+    <div data-sw="out" style="margin-top:8px"></div>
+  </div>`;
+
+  bd.querySelectorAll("[data-sw]").forEach(el => {
+    const k = el.dataset.sw;
+    if (k === "go"){ el.onclick = () => runSweep(p); return; }
+    if (k === "out") return;
+    el.onchange = () => {
+      if (k === "key"){
+        const found = keys.find(x => x.id === el.value);
+        if (found){ o.scope = found.scope; o.node_id = found.node_id;
+                    o.key = found.key; o.unit = found.unit; }
+      } else if (["from","to","steps"].includes(k)){
+        o[k] = parseFloat(el.value);
+      } else { o[k] = el.value; }
+      drawSweep(p, bd);
+    };
+  });
+  if (p._sweep) plotSweep(p, bd.querySelector('[data-sw="out"]'));
+}
+
+/** Every numeric constant in the graph, flattened into one addressable list. */
+function sweepableKeys(){
+  const out = [];
+  const add = (scope, node_id, key, raw, label) => {
+    const m = NUM_UNIT.exec(String(raw));
+    if (!m) return;
+    out.push({id:`${scope}|${node_id||""}|${key}`, scope, node_id, key,
+              unit:m[2]||"", label});
+  };
+  Object.entries(graph.globals).forEach(([k,v]) => add("globals", null, k, v, `global · ${k}`));
+  graph.populations.forEach(p => Object.entries(p.params||{})
+    .forEach(([k,v]) => add("population", p.id, k, v, `${p.id} · ${k}`)));
+  graph.synapses.forEach(s => Object.entries(s.params||{})
+    .forEach(([k,v]) => add("synapse", s.id, k, v, `${s.id} · ${k}`)));
+  graph.stimuli.forEach(s => Object.entries(s.params||{})
+    .forEach(([k,v]) => add("stimulus", s.id, k, v, `${s.id} · ${k}`)));
+  return out;
+}
+
+async function runSweep(p){
+  const o = p.opts;
+  const n = clamp(Math.round(o.steps), 2, 40);
+  const values = Array.from({length:n}, (_,i) => o.from + (o.to-o.from)*i/(n-1));
+  const root = document.querySelector(`[data-panel="${p.id}"]`);
+  const btn = root.querySelector('[data-sw="go"]');
+  const out = root.querySelector('[data-sw="out"]');
+  if (btn){ btn.disabled = true; btn.textContent = `Running ${n} simulations…`; }
+  if (out) out.innerHTML = `<div class="note">Roughly ${(n*1.5).toFixed(0)} s.</div>`;
+  try{
+    const atNum = parseFloat(o.at);
+    const spec = {scope:o.scope, node_id:o.node_id, key:o.key, unit:o.unit||"",
+                  values, metric:o.metric, target:p.target,
+                  options:{at_frequency: Number.isFinite(atNum) ? atNum : "resonant"}};
+    p._sweep = await post("/api/sweep", {graph, spec});
+    plotSweep(p, out);
+  }catch(err){
+    if (out) out.innerHTML = `<div class="diag error"><span class="sev">error</span><span>${esc(err.message)}</span></div>`;
+  }finally{
+    if (btn){ btn.disabled = false; btn.textContent = `Run sweep · ${n} simulations`; }
+  }
+}
+
+function plotSweep(p, host){
+  if (!host || !p._sweep) return;
+  const s = p._sweep;
+  const good = s.points.filter(x => x.metric != null && Number.isFinite(x.metric));
+  if (!good.length){
+    host.innerHTML = `<div class="note">Every point failed. First error:<br>${
+      esc((s.points[0] && s.points[0].error) || "unknown")}</div>`;
+    return;
+  }
+  host.innerHTML = `<svg style="width:100%;height:180px;display:block"></svg>
+    ${s.points.length > good.length
+      ? `<div class="note">${s.points.length-good.length} point(s) failed and were dropped.</div>` : ""}`;
+  const svg = host.querySelector("svg");
+  const xs = good.map(g => g.value), ys = good.map(g => g.metric);
+  const f = frame(svg, `${s.parameter}${s.unit?` (${s.unit})`:""}`, s.label);
+  const ymin = Math.min.apply(null, ys), ymax = Math.max.apply(null, ys);
+  const pad = (ymax-ymin)*0.12 || Math.abs(ymax)*0.12 || 1;
+  const a = f.axes(Math.min.apply(null,xs), Math.max.apply(null,xs), ymin-pad, ymax+pad);
+  let d = "", dots = "";
+  good.forEach((g,k) => {
+    const X = a.X(g.value), Y = a.Y(g.metric);
+    d += `${k?"L":"M"}${X.toFixed(1)},${Y.toFixed(1)}`;
+    dots += `<circle cx="${X.toFixed(1)}" cy="${Y.toFixed(1)}" r="2.8"/>`;
+  });
+  svgAdd(svg, `<path d="${d}" fill="none" stroke="#7c8cff" stroke-width="1.6"/>
+               <g fill="#7c8cff">${dots}</g>`);
+}
+
+// =====================================================================
+// Toolbar
+// =====================================================================
+
+$("btnAddPop").onclick = addPopulation;
+$("btnAddStim").onclick = addStimulus;
+$("btnConnect").onclick = () => setConnectMode(!connectMode);
+$("btnDelete").onclick = deleteSelected;
+$("btnRun").onclick = doRun;
+$("btnAddPanel").onclick = () => addPanel("raster");
+
+$("btnExample").onclick = async () => {
+  const r = await fetch("/api/example");
+  if (!r.ok) return flash("Could not load the bundled example.");
+  graph = normaliseGraph(await r.json());
+  lastResult = null; anim = null; stopPlay();
+  panels.forEach(p => { p.target = graph.populations[0]?.id || null; p._sweep = null; });
+  select(null); renderPanels(); touched();
+};
+
+$("btnSave").onclick = () => {
+  const b = new Blob([JSON.stringify(graph,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b);
+  a.download = (graph.name||"network").replace(/\s+/g,"_")+".json";
+  a.click(); URL.revokeObjectURL(a.href);
+};
+$("btnImport").onclick = () => $("fileInput").click();
+$("fileInput").onchange = (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    try{
+      graph = normaliseGraph(JSON.parse(fr.result));
+      lastResult = null; anim = null; stopPlay();
+      panels.forEach(p => { p.target = graph.populations[0]?.id || null; p._sweep = null; });
+      select(null); renderPanels(); touched();
+    }catch(err){ flash("Not valid JSON: "+err.message); }
+  };
+  fr.readAsText(file); e.target.value = "";
+};
+$("btnExport").onclick = async () => {
+  try{
+    const out = await post("/api/export", {graph});
+    $("codeText").textContent = out.script; $("codeDialog").showModal();
+  }catch(err){ flash("Export failed: "+err.message); }
+};
+$("btnCopyCode").onclick = () => {
+  navigator.clipboard.writeText($("codeText").textContent);
+  $("btnCopyCode").textContent = "Copied";
+  setTimeout(() => $("btnCopyCode").textContent = "Copy", 1200);
+};
+
+window.addEventListener("keydown", (e) => {
+  if (e.target.matches("input,textarea,select")) return;
+  if (e.key === "Delete" || e.key === "Backspace"){ e.preventDefault(); deleteSelected(); }
+  if (e.key === "Escape") setConnectMode(false);
+  if (e.key === "c") setConnectMode(!connectMode);
+  if (e.key === " "){ e.preventDefault(); play.on ? stopPlay() : startPlay(); }
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) doRun();
+});
+
+let resizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => renderPanels(), 160);
+});
+
+// =====================================================================
+// Boot
+// =====================================================================
+
+(async function boot(){
+  graph = emptyGraph();
+  try{
+    const r = await fetch("/api/example");
+    if (r.ok) graph = normaliseGraph(await r.json());
+  }catch(_){}
+  try{
+    const m = await fetch("/api/metrics");
+    if (m.ok) metricCatalog = (await m.json()).metrics || [];
+  }catch(_){}
+
+  const first = graph.populations[0] ? graph.populations[0].id : null;
+  panels = [
+    {id:"pa", type:"raster",   target:first, opts:{}},
+    {id:"pb", type:"neurons",  target:first, opts:{}},
+    {id:"pc", type:"spectrum", target:first, opts:{}},
+    {id:"pd", type:"metrics",  target:first, opts:{}},
+  ];
+
+  renderCanvas(); renderInspector(); renderPanels(); updateClock();
+  doValidate();
+})();
+</script>
+</body>
+</html>

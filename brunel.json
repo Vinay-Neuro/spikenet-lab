@@ -1,0 +1,84 @@
+{
+  "version": "1",
+  "name": "Brunel E/I network with adaptation",
+  "globals": {
+    "tau_m": "20*ms",
+    "tau_syn_e": "5*ms",
+    "tau_syn_i": "10*ms",
+    "theta": "20*mV",
+    "V_r": "10*mV",
+    "J": "0.1*mV",
+    "g": "4.5",
+    "adaptation_strength": "5*mV"
+  },
+  "populations": [
+    {
+      "id": "exc",
+      "label": "Excitatory",
+      "n": 1000,
+      "equations": "dv/dt = (-v + s_e + s_i - w)/tau_m : volt\nds_e/dt = -s_e/tau_syn_e : volt\nds_i/dt = -s_i/tau_syn_i : volt\ndw/dt = -w/tau_m : volt",
+      "threshold": "v > theta",
+      "reset": "v = V_r\nw += adaptation_strength",
+      "refractory": "2*ms",
+      "method": "euler",
+      "initial": { "v": "V_r", "s_e": "0*mV", "s_i": "0*mV", "w": "0*mV" },
+      "position": { "x": 120, "y": 80 }
+    },
+    {
+      "id": "inh",
+      "label": "Inhibitory",
+      "n": 250,
+      "equations": "dv/dt = (-v + s_e + s_i - w)/tau_m : volt\nds_e/dt = -s_e/tau_syn_e : volt\nds_i/dt = -s_i/tau_syn_i : volt\ndw/dt = -w/tau_m : volt",
+      "threshold": "v > theta",
+      "reset": "v = V_r\nw += adaptation_strength",
+      "refractory": "2*ms",
+      "method": "euler",
+      "initial": { "v": "V_r", "s_e": "0*mV", "s_i": "0*mV", "w": "0*mV" },
+      "position": { "x": 480, "y": 80 }
+    }
+  ],
+  "synapses": [
+    {
+      "id": "ee", "source": "exc", "target": "exc", "label": "E to E",
+      "probability": 0.1, "on_pre": "s_e_post += J", "delay": "1.5*ms"
+    },
+    {
+      "id": "ei", "source": "exc", "target": "inh", "label": "E to I",
+      "probability": 0.1, "on_pre": "s_e_post += J", "delay": "1.5*ms"
+    },
+    {
+      "id": "ie", "source": "inh", "target": "exc", "label": "I to E",
+      "probability": 0.1, "on_pre": "s_i_post -= g*J", "delay": "1.5*ms"
+    },
+    {
+      "id": "ii", "source": "inh", "target": "inh", "label": "I to I",
+      "probability": 0.1, "on_pre": "s_i_post -= g*J", "delay": "1.5*ms"
+    }
+  ],
+  "stimuli": [
+    {
+      "id": "drive_e", "target": "exc", "kind": "poisson", "label": "Poisson drive to E",
+      "target_var": "v",
+      "params": { "n_inputs": 100, "rate": "105*Hz", "weight": "0.1*mV" },
+      "position": { "x": -140, "y": 60 }
+    },
+    {
+      "id": "drive_i", "target": "inh", "kind": "poisson", "label": "Poisson drive to I",
+      "target_var": "v",
+      "params": { "n_inputs": 100, "rate": "105*Hz", "weight": "0.1*mV" },
+      "position": { "x": -140, "y": 170 }
+    }
+  ],
+  "monitors": [
+    { "id": "spikes_e", "target": "exc", "kind": "spike" },
+    { "id": "rate_e", "target": "exc", "kind": "rate" },
+    { "id": "trace_e", "target": "exc", "kind": "state", "variables": ["v"], "record": [0, 1, 2], "dt": "1*ms" }
+  ],
+  "run": {
+    "duration": "1.5*second",
+    "dt": "0.1*ms",
+    "transient": "0.5*second",
+    "seed": 1234,
+    "codegen_target": "numpy"
+  }
+}
