@@ -232,8 +232,6 @@ This is still a prototype. In particular:
 
 ## References
 
-### Brian2
-
 - Goodman, D. F. M. & Brette, R. (2008). *The Brian simulator for spiking neural networks in Python.* Frontiers in Neuroinformatics.  
   https://pmc.ncbi.nlm.nih.gov/articles/PMC2605403/
 
@@ -250,7 +248,7 @@ The default network and the initial set of experiments were developed from a gro
 
 ## Acknowledgements
 
-SpikeNet Lab is built on [Brian2](https://brian2.readthedocs.io/). The current project was developed using Claude Opus.
+SpikeNet Lab is built on [Brian2](https://brian2.readthedocs.io/). The concept and direction of the project are mine, the implementation was developed with Claude Opus.
 
 ## License
 
